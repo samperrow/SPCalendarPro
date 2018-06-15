@@ -36,3 +36,4 @@ This returns an object that contains only the events that have time conflicts wi
         console.log( timeConflicts.events[i] );
     }
 
+### This library is still in its pre-beta phase, so you can expect numerous updates, revisions, bug fixes, and improvements over the coming weeks.
