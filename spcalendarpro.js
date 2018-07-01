@@ -114,6 +114,8 @@
                 var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions></GetListItems>";
                 var query = "";
 
+                //_spPageContextInfo.webUIVersion
+
                 if (type === 'single') {
                     query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query></GetListItems>";
                 } else if (type === 'recurring') {
@@ -127,7 +129,7 @@
 
             // create the SOAP string we are going to use.
             function createSoapStr(query) {
-                var ajaxURL = document.location.origin + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx';
+                var ajaxURL = document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx';
                 var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'>";
                 var list = "<listName>" + listName + "</listName>";
                 var soapFooter = "</soap:Body></soap:Envelope>";
