@@ -80,7 +80,7 @@
 
         // this will convert date/time info from a sharepoint form into proper date objects to be used later.
         SPCalendarPro.prototype.getDateTimesFromForm = function(row1 = 0, row2 = 1) {
-            var formattedDT = getUserDateTimesFromForm(row1, row2);
+            var formattedDT = getCalendarEvents(row1, row2);
             return formatDateTimesToObj(this, formattedDT.userBeginDT, formattedDT.userEndDT);
         }
 
@@ -105,7 +105,7 @@
         
         
         // get single, recurring, or all calendar events
-        var getCalendarEvents = function(listName, async = true, type) {
+        var getCalendarEvents = function(listName, async = true, type, callback) {
             var events = [];
 
             // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
@@ -134,7 +134,7 @@
                 var list = "<listName>" + listName + "</listName>";
                 var soapFooter = "</soap:Body></soap:Envelope>";
                 var soapStr = soapHeader + list + query + soapFooter;
-                return postAjax(ajaxURL, soapStr);
+                return postAjax(ajaxURL, soapStr, callback);
             }
 
             // accepts XML, returns an array of objects, each of which are calendar events.
@@ -158,18 +158,44 @@
             }
 
             // make ajax request. fires synchronously by default. No j-word needed!
-            function postAjax(url, soapStr) {
+            function postAjax(url, soapStr, callback) {
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', url, async);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
                 xhr.send(soapStr);
 
-                return (async === true) ? xhr.onreadystatechange = getEventData() : getEventData();
+                // console.log(callback);
+                
+
+                // return (async === true) 
+                //     ? xhr.onreadystatechange = getEventData()
+                //     : getEventData();
+
+                if (async === true) {
+                    xhr.onreadystatechange = function() {
+                        // callback();
+                        return getEventData();
+                    }
+                    
+                } else {
+                    getEventData();
+                }
 
                 function getEventData() {
                     if (xhr.readyState == 4 && xhr.status == 200) {
-                        return events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
+                        events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
+                        
+                        if (callback) {
+                            // return callback(events);
+                            // callback();
+                            // console.log( 'here');
+                            return events;
+                        } else {
+                            return events;
+                        }
+                        // callback();
+                        // return;
                     }
                 }
 
@@ -216,16 +242,24 @@
 
 
         // the main object we use.
-        function SPCalendarPro(listName, async, type) {
+        function SPCalendarPro(listName, async, type, callback) {
             this.listName = listName;
-            this.events = getCalendarEvents(this.listName, async, type);
             this.userDateTimes = {};
+
+            this.callback = function() {
+                console.log( 'hey');
+                return callback;
+            }
+
+            this.events = getCalendarEvents(this.listName, async, type, callback);
+
+
             return this;
         }
 
         var publicData = {
-            getEvents: function(listName, async, type) {
-                return new SPCalendarPro(listName, async, type);
+            getEvents: function(listName, async, type, callback) {
+                return new SPCalendarPro(listName, async, type, callback);
             },
         }
 
