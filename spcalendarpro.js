@@ -129,7 +129,7 @@
 
             // create the SOAP string we are going to use.
             function createSoapStr(query) {
-                var ajaxURL = document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx';
+                var ajaxURL = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
                 var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'>";
                 var list = "<listName>" + listName + "</listName>";
                 var soapFooter = "</soap:Body></soap:Envelope>";
@@ -158,48 +158,22 @@
             }
 
             // make ajax request. fires synchronously by default. No j-word needed!
-            function postAjax(url, soapStr, callback) {
+            function postAjax(url, soapStr) {
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', url, async);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
                 xhr.send(soapStr);
-
-                // console.log(callback);
-                
-
-                // return (async === true) 
-                //     ? xhr.onreadystatechange = getEventData()
-                //     : getEventData();
-
-                if (async === true) {
-                    xhr.onreadystatechange = function() {
-                        // callback();
-                        return getEventData();
-                    }
-                    
-                } else {
-                    getEventData();
-                }
-
-                function getEventData() {
+        
+                return (async === true) ? xhr.onload = function() { getEvents() } : getEvents();
+        
+                function getEvents() {
                     if (xhr.readyState == 4 && xhr.status == 200) {
-                        events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
-                        
-                        if (callback) {
-                            // return callback(events);
-                            // callback();
-                            // console.log( 'here');
-                            return events;
-                        } else {
-                            return events;
-                        }
-                        // callback();
-                        // return;
+                        return events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
                     }
                 }
-
-            }
+        
+            }  
             
             return events;
         }
