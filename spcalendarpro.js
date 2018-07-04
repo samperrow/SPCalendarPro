@@ -216,27 +216,19 @@
 
 
         // the main object we use.
-        function SPCalendarPro(listName, async, type, callback) {
+        function SPCalendarPro(listName, async, type) {
             this.listName = listName;
             this.userDateTimes = {};
-
-            this.callback = function() {
-                console.log( 'hey');
-                return callback;
-            }
-
-            this.events = getCalendarEvents(this.listName, async, type, callback);
-
-
+            this.events = getCalendarEvents(this.listName, async, type);
             return this;
         }
 
-        var publicData = {
-            getEvents: function(listName, async, type, callback) {
-                return new SPCalendarPro(listName, async, type, callback);
+        var data = {
+            getEvents: function(listName, async, type) {
+                return new SPCalendarPro(listName, async, type);
             },
         }
 
-    return publicData;
+    return data;
 
 }));
