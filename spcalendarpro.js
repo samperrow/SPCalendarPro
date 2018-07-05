@@ -105,7 +105,8 @@
         
         
         // get single, recurring, or all calendar events
-        var getCalendarEvents = function(listName, async = true, type, callback) {
+        var getCalendarEvents = function(listName, async, type) {
+            
             var events = [];
 
             // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
@@ -113,8 +114,6 @@
                 var startRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
                 var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions></GetListItems>";
                 var query = "";
-
-                //_spPageContextInfo.webUIVersion
 
                 if (type === 'single') {
                     query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query></GetListItems>";
@@ -129,12 +128,10 @@
 
             // create the SOAP string we are going to use.
             function createSoapStr(query) {
-                var ajaxURL = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
-                var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'>";
-                var list = "<listName>" + listName + "</listName>";
+                var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + listName + "</listName>";
                 var soapFooter = "</soap:Body></soap:Envelope>";
-                var soapStr = soapHeader + list + query + soapFooter;
-                return postAjax(ajaxURL, soapStr, callback);
+                var soapStr = soapHeader + query + soapFooter;
+                return postAjax(soapStr);
             }
 
             // accepts XML, returns an array of objects, each of which are calendar events.
@@ -158,13 +155,14 @@
             }
 
             // make ajax request. fires synchronously by default. No j-word needed!
-            function postAjax(url, soapStr) {
+            function postAjax(soapStr) {
+                var url = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
                 var xhr = new XMLHttpRequest();
                 xhr.open('POST', url, async);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
                 xhr.send(soapStr);
-        
+
                 return (async === true) ? xhr.onload = function() { getEvents() } : getEvents();
         
                 function getEvents() {
@@ -173,7 +171,7 @@
                     }
                 }
         
-            }  
+            } 
             
             return events;
         }
@@ -181,7 +179,10 @@
 
         // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use.
         // by default this grabs the first and second date/time rows from a form.
-        var getUserDateTimesFromForm = function(row1 = 0, row2 = 1) {
+        var getUserDateTimesFromForm = function(row1, row2) {
+            row1 = (!row1) ? 0 : 1;
+            row2 = (!row2) ? 0 : 1;
+
             var userBeginDT, userEndDT;
 
             var startDTParentElem = document.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[row1].parentNode.parentNode;
@@ -220,6 +221,11 @@
             this.listName = listName;
             this.userDateTimes = {};
             this.events = getCalendarEvents(this.listName, async, type);
+
+            this.exec = function(callback) {
+                return callback(this);
+            }
+
             return this;
         }
 
@@ -232,3 +238,4 @@
     return data;
 
 }));
+               
