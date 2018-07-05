@@ -79,8 +79,8 @@
         }
 
         // this will convert date/time info from a sharepoint form into proper date objects to be used later.
-        SPCalendarPro.prototype.getDateTimesFromForm = function(row1 = 0, row2 = 1) {
-            var formattedDT = getCalendarEvents(row1, row2);
+        SPCalendarPro.prototype.getDateTimesFromForm = function(row1, row2) {
+            var formattedDT = getDateTimesFromForm(row1, row2);
             return formatDateTimesToObj(this, formattedDT.userBeginDT, formattedDT.userEndDT);
         }
 
@@ -92,9 +92,9 @@
         // to be used internally, only for formatted the provided datetimes into other formats.
         function formatDateTimesToObj(thisObj, startDT, endDT) {
             thisObj.userDateTimes = {
-                startDateTime: startDT,
-                startDate: startDT.toDateString(),
-                startTime: startDT.toTimeString(),
+                beginDateTime: startDT,
+                beginDate: startDT.toDateString(),
+                beginTime: startDT.toTimeString(),
                 endDateTime: endDT,
                 endDate: endDT.toDateString(),              
                 endTime: endDT.toTimeString()
@@ -105,34 +105,46 @@
         
         
         // get single, recurring, or all calendar events
-        var getCalendarEvents = function(listName, async, type) {
-            
-            var events = [];
+        var getCalendarEvents = function(obj, async, type) {
 
             // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
-            var createQuery = function() {
-                var startRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
-                var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions></GetListItems>";
-                var query = "";
+            var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + obj.listName + "</listName>";
+            var soapFooter = "</soap:Body></soap:Envelope>";
 
-                if (type === 'single') {
-                    query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query></GetListItems>";
-                } else if (type === 'recurring') {
-                    query = "<query><Query><Where><And>" + startRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
-                } else {
-                    query = "<query><Query><Where>" + startRecurringCaml + endRecurringCaml;
-                } 
+            var startRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
+            var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions></GetListItems>";
+            var query = "";
 
-                return createSoapStr(query);
-            }();
-
-            // create the SOAP string we are going to use.
-            function createSoapStr(query) {
-                var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + listName + "</listName>";
-                var soapFooter = "</soap:Body></soap:Envelope>";
-                var soapStr = soapHeader + query + soapFooter;
-                return postAjax(soapStr);
+            if (type === 'single') {
+                query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query></GetListItems>";
+            } else if (type === 'recurring') {
+                query = "<query><Query><Where><And>" + startRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
+            } else {
+                query = "<query><Query><Where>" + startRecurringCaml + endRecurringCaml;
             }
+
+            var soapStr = soapHeader + query + soapFooter;
+            postAjax(soapStr);
+
+            // make ajax request. fires synchronously by default. No j-word needed!
+            function postAjax(soapStr) {
+                var url = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
+                var xhr = new XMLHttpRequest();
+
+                xhr.open('POST', url, async);
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
+                xhr.send(soapStr);
+
+                function getEvents() {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        obj.events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
+                        return obj;
+                    }
+                }
+
+                return (async === true) ? xhr.onload = function() { getEvents() } : getEvents();
+            }    
 
             // accepts XML, returns an array of objects, each of which are calendar events.
             function XmlToJson(xml) {
@@ -154,64 +166,44 @@
                 return eventArr;
             }
 
-            // make ajax request. fires synchronously by default. No j-word needed!
-            function postAjax(soapStr) {
-                var url = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', url, async);
-                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
-                xhr.send(soapStr);
-
-                return (async === true) ? xhr.onload = function() { getEvents() } : getEvents();
-        
-                function getEvents() {
-                    if (xhr.readyState == 4 && xhr.status == 200) {
-                        return events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
-                    }
-                }
-        
-            } 
-            
-            return events;
+            return obj.events;
         }
 
+        String.prototype.formatInputToHours = function() {
+            var amPmTime = this.split(' ');
+            var hours = Number( amPmTime[0] );
+            return (amPmTime[1] === 'PM' && hours < 12) ? hours += 12 : hours;
+        }
 
         // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use.
         // by default this grabs the first and second date/time rows from a form.
-        var getUserDateTimesFromForm = function(row1, row2) {
-            row1 = (!row1) ? 0 : 1;
-            row2 = (!row2) ? 0 : 1;
+        var getDateTimesFromForm = function(row1, row2) {
+            row1 = (!row1) ? 0 : row1;
+            row2 = (!row2) ? 1 : row2;
 
-            var userBeginDT, userEndDT;
+            function findDateTimes(row) {
+                var dtParentElem = document.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[row].parentNode.parentNode;
+                var timeElem = dtParentElem.getElementsByClassName('ms-dttimeinput')[0];
+                
+                if (timeElem) {
+                    var hours = timeElem.getElementsByTagName('select')[0].value;
+                    var min = timeElem.getElementsByTagName('select')[1].value;
+                }
 
-            var startDTParentElem = document.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[row1].parentNode.parentNode;
-            var endDTParentElem = document.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[row2].parentNode.parentNode;
-
-            var beginDateElem = startDTParentElem.getElementsByTagName('td')[0].getElementsByTagName('input')[0];
-            var beginHours = startDTParentElem.getElementsByClassName('ms-dttimeinput')[0].getElementsByTagName('select')[0];
-            var startMin = startDTParentElem.getElementsByClassName('ms-dttimeinput')[0].getElementsByTagName('select')[1];
-
-            var endDateElem = endDTParentElem.getElementsByTagName('td')[0].getElementsByTagName('input')[0];
-            var endHours = endDTParentElem.getElementsByClassName('ms-dttimeinput')[0].getElementsByTagName('select')[0];
-            var endMin = endDTParentElem.getElementsByClassName('ms-dttimeinput')[0].getElementsByTagName('select')[1];
-
-            String.prototype.formatInputToHours = function() {
-                var amPmTime = this.split(' ');
-                var hours = Number( amPmTime[0] );
-                return (amPmTime[1] === 'PM' && hours < 12) ? hours += 12 : hours;
+                return {
+                    date: dtParentElem.getElementsByTagName('td')[0].getElementsByTagName('input')[0].value,
+                    time: function() {
+                        return (hours && min) ? hours.formatInputToHours() + ':' + min : '';
+                    },
+                }
             }
 
-            var formatDateTimes = function() {
-                var beginTime = beginHours.value.formatInputToHours() + ':' + startMin.value;
-                var endTime = endHours.value.formatInputToHours() + ':' + endMin.value;
-                userBeginDT = new Date( beginDateElem.value + ' ' + beginTime );
-                userEndDT = new Date( endDateElem.value + ' ' + endTime );
-            }();
+            var startDateTimes = findDateTimes(row1);
+            var endDateTimes = findDateTimes(row2);
 
             return {
-                userBeginDT: userBeginDT,
-                userEndDT: userEndDT
+                userBeginDT: new Date( startDateTimes.date + ' ' + startDateTimes.time() ),
+                userEndDT: new Date( endDateTimes.date + ' ' + endDateTimes.time() )
             }
         }
 
@@ -220,11 +212,12 @@
         function SPCalendarPro(listName, async, type) {
             this.listName = listName;
             this.userDateTimes = {};
-            this.events = getCalendarEvents(this.listName, async, type);
 
-            this.exec = function(callback) {
-                return callback(this);
-            }
+            // this.exec = function(callback) {
+            //     return callback(this);
+            // }
+
+            this.events = getCalendarEvents(this, async, type);
 
             return this;
         }
