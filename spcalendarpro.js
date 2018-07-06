@@ -104,7 +104,7 @@
 
         
         // get single, recurring, or all calendar events
-        var getCalendarEvents = function(obj, async, type, cb) {
+        var getCalendarEvents = function(obj, async, type) {
 
             // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
             var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + obj.listName + "</listName>";
@@ -138,7 +138,7 @@
                 function getEvents() {
                     if (xhr.readyState == 4 && xhr.status == 200) {
                         obj.events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
-                        return obj.callback(obj);
+                        return (obj.callback) ? obj.callback(obj) : obj;
                     }
                 }
 
@@ -212,13 +212,11 @@
             this.listName = listName;
             this.userDateTimes = {};
 
-            if (cb) {
-                this.callback = function() {
-                    return cb(this);
-                }
+            this.callback = function() {
+                return (cb) ? cb(this) : null;
             }
 
-            this.events = getCalendarEvents(this, async, type, cb);
+            this.events = getCalendarEvents(this, async, type);
             return this;
         }
 
