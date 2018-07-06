@@ -103,9 +103,8 @@
         }
 
         
-        
         // get single, recurring, or all calendar events
-        var getCalendarEvents = function(obj, async, type) {
+        var getCalendarEvents = function(obj, async, type, cb) {
 
             // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
             var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + obj.listName + "</listName>";
@@ -139,7 +138,7 @@
                 function getEvents() {
                     if (xhr.readyState == 4 && xhr.status == 200) {
                         obj.events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
-                        return obj;
+                        return obj.callback(obj);
                     }
                 }
 
@@ -209,22 +208,23 @@
 
 
         // the main object we use.
-        function SPCalendarPro(listName, async, type) {
+        function SPCalendarPro(listName, async, type, cb) {
             this.listName = listName;
             this.userDateTimes = {};
 
-            // this.exec = function(callback) {
-            //     return callback(this);
-            // }
+            if (cb) {
+                this.callback = function() {
+                    return cb(this);
+                }
+            }
 
-            this.events = getCalendarEvents(this, async, type);
-
+            this.events = getCalendarEvents(this, async, type, cb);
             return this;
         }
 
         var data = {
-            getEvents: function(listName, async, type) {
-                return new SPCalendarPro(listName, async, type);
+            getEvents: function(listName, async, type, cb) {
+                return new SPCalendarPro(listName, async, type, cb);
             },
         }
 
