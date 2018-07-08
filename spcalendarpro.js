@@ -15,6 +15,22 @@
     global.spcalpro = factory();
     }(this, function() {
 
+        function getSPEnvInfo() {
+            var spVersion = _spPageContextInfo.webUIVersion;
+            var versionObj = {};
+
+            if (spVersion === 15) {
+                versionObj.year = '2013';
+                versionObj.soapURL = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
+                // versionObj.soapURL = "http://sharepoint2013" + '/_vti_bin/Lists.asmx';
+
+            } else {
+                versionObj.year = '2010';
+                versionObj.soapURL = document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx';
+            }
+            return versionObj;
+        }
+
         // checks if supplied datetimes are the same date as ones in calendar list.
         SPCalendarPro.prototype.isSameDate = function() {
             var reqStartDate = this.userDateTimes.startDate;
@@ -80,18 +96,20 @@
 
         // this will convert date/time info from a sharepoint form into proper date objects to be used later.
         SPCalendarPro.prototype.getDateTimesFromForm = function(row1, row2) {
-            var formattedDT = getDateTimesFromForm(row1, row2);
-            return formatDateTimesToObj(this, formattedDT.userBeginDT, formattedDT.userEndDT);
+            var formattedDT = convertFormDateTimes(row1, row2);
+            this.userDateTimes = formatDateTimesToObj(formattedDT.userBeginDT, formattedDT.userEndDT);
+            return this;
         }
 
-        // user directly supplies begin and end datetimes
+        // // user directly supplies begin and end datetimes
         SPCalendarPro.prototype.provideDateTimes = function(datetime1, datetime2) {
-            return formatDateTimesToObj(this, datetime1, datetime2);
+            this.userDateTimes = formatDateTimesToObj(datetime1, datetime2);
+            return this;
         }
 
         // to be used internally, only for formatted the provided datetimes into other formats.
-        function formatDateTimesToObj(thisObj, startDT, endDT) {
-            thisObj.userDateTimes = {
+        function formatDateTimesToObj(startDT, endDT) {
+            return {
                 beginDateTime: startDT,
                 beginDate: startDT.toDateString(),
                 beginTime: startDT.toTimeString(),
@@ -99,7 +117,6 @@
                 endDate: endDT.toDateString(),              
                 endTime: endDT.toTimeString()
             };
-            return thisObj;
         }
 
         
@@ -127,7 +144,7 @@
 
             // make ajax request. fires synchronously by default. No j-word needed!
             function postAjax(soapStr) {
-                var url = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
+                var url = obj.sourceSite;
                 var xhr = new XMLHttpRequest();
 
                 xhr.open('POST', url, async);
@@ -157,7 +174,10 @@
                         for (var attrNum = 0; attrNum < rowAttrs.length; attrNum++) {
                             var thisAttrName = rowAttrs[attrNum].name;
                             var thisObjectName = thisAttrName.split("ows_")[1];
-                            row[thisObjectName] = rowAttrs[attrNum].value;
+                            
+                            row[thisObjectName] = (thisObjectName === 'EventDate' || thisObjectName === 'EndDate')
+                                ? new Date(rowAttrs[attrNum].value.replace('-', '/') )
+                                : rowAttrs[attrNum].value;
                         }
                         eventArr.push(row);
                     }
@@ -176,7 +196,7 @@
 
         // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use.
         // by default this grabs the first and second date/time rows from a form.
-        var getDateTimesFromForm = function(row1, row2) {
+        var convertFormDateTimes = function(row1, row2) {
             row1 = (!row1) ? 0 : row1;
             row2 = (!row2) ? 1 : row2;
 
@@ -208,25 +228,33 @@
 
 
         // the main object we use.
-        function SPCalendarPro(listName, async, type, cb) {
-            this.listName = listName;
+        function SPCalendarPro(obj) {
+            this.listName = obj.listName;
             this.userDateTimes = {};
+            this.sourceSite = (obj.sourceSite) ? obj.sourceSite + '/_vti_bin/Lists.asmx' : getSPEnvInfo().soapURL;
 
             this.callback = function() {
-                return (cb) ? cb(this) : null;
+                return (obj.callback) ? obj.callback(this) : null;
             }
 
-            this.events = getCalendarEvents(this, async, type);
+            this.events = getCalendarEvents(this, obj.async, obj.type);
             return this;
         }
 
         var data = {
-            getEvents: function(listName, async, type, cb) {
-                return new SPCalendarPro(listName, async, type, cb);
+            getEvents: function(obj) {
+                return new SPCalendarPro(obj);
             },
+
+            getDateTimesFromForm: function(row1, row2) {
+                var time = convertFormDateTimes(row1, row2);
+                return formatDateTimesToObj( time.userBeginDT, time.userEndDT );
+            },
+            
         }
 
     return data;
 
 }));
-               
+
+// create method to only return events after today
