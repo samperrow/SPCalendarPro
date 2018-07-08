@@ -144,7 +144,7 @@
 
             // make ajax request. fires synchronously by default. No j-word needed!
             function postAjax(soapStr) {
-                var url = obj.sourceSite;
+                var url = obj.soapUrl;
                 var xhr = new XMLHttpRequest();
 
                 xhr.open('POST', url, async);
@@ -231,7 +231,7 @@
         function SPCalendarPro(obj) {
             this.listName = obj.listName;
             this.userDateTimes = {};
-            this.sourceSite = (obj.sourceSite) ? obj.sourceSite + '/_vti_bin/Lists.asmx' : getSPEnvInfo().soapURL;
+            this.soapUrl = (obj.sourceSite) ? obj.sourceSite + '/_vti_bin/Lists.asmx' : getSPEnvInfo().soapURL;
 
             this.callback = function() {
                 return (obj.callback) ? obj.callback(this) : null;
