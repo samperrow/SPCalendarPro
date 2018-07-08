@@ -61,8 +61,10 @@
             var reqEndDT = this.userDateTimes.endDateTime;
 
             this.events = this.events.filter(function(event) {
+                console.log( event.EventDate );
                 var arrStartDT = new Date(event.EventDate);
                 var arrEndDT = new Date(event.EndDate);
+                console.log( arrStartDT);
         
                 return (
                     (reqStartDT <= arrStartDT && reqEndDT >= arrEndDT) || (arrStartDT < reqStartDT && arrEndDT > reqStartDT)
@@ -98,6 +100,15 @@
         SPCalendarPro.prototype.getDateTimesFromForm = function(row1, row2) {
             var formattedDT = convertFormDateTimes(row1, row2);
             this.userDateTimes = formatDateTimesToObj(formattedDT.userBeginDT, formattedDT.userEndDT);
+            return this;
+        }
+
+        // // user directly supplies begin and end datetimes
+        SPCalendarPro.prototype.getEventsAfterToday = function() {
+            this.events = this.events.filter(function(event) {
+                var today = new Date();
+                return (event.EventDate >= today || event.EndDate >= today);
+            });
             return this;
         }
 
@@ -256,5 +267,3 @@
     return data;
 
 }));
-
-// create method to only return events after today
