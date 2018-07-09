@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 2018.01
+* Version 2018.02
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @category Plugins/SPCalendarPro
@@ -22,7 +22,6 @@
             if (spVersion === 15) {
                 versionObj.year = '2013';
                 versionObj.soapURL = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
-                // versionObj.soapURL = "http://sharepoint2013" + '/_vti_bin/Lists.asmx';
 
             } else {
                 versionObj.year = '2010';
@@ -61,10 +60,8 @@
             var reqEndDT = this.userDateTimes.endDateTime;
 
             this.events = this.events.filter(function(event) {
-                console.log( event.EventDate );
-                var arrStartDT = new Date(event.EventDate);
-                var arrEndDT = new Date(event.EndDate);
-                console.log( arrStartDT);
+                var arrStartDT = event.EventDate;
+                var arrEndDT = event.EndDate;
         
                 return (
                     (reqStartDT <= arrStartDT && reqEndDT >= arrEndDT) || (arrStartDT < reqStartDT && arrEndDT > reqStartDT)
