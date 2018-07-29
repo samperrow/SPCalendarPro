@@ -15,28 +15,24 @@
     global.spcalpro = factory();
     }(this, function() {
 
-        function getSPEnvInfo() {
+        function getSPEnvInfo(sourceSite) {
             var spVersion = _spPageContextInfo.webUIVersion;
-            var versionObj = {};
-
-            if (spVersion === 15) {
-                versionObj.year = '2013';
-                versionObj.soapURL = _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx';
-
-            } else {
-                versionObj.year = '2010';
-                versionObj.soapURL = document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx';
+            
+            return {
+                year: (spVersion === 15) ? '2013' : '2010',
+                soapURL: sourceSite 
+                    ? sourceSite + '/_vti_bin/Lists.asmx'
+                    : (spVersion === 15) ? _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx' : document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx',
             }
-            return versionObj;
         }
 
         // checks if supplied datetimes are the same date as ones in calendar list.
         SPCalendarPro.prototype.isSameDate = function() {
-            var reqStartDate = this.userDateTimes.startDate;
+            var reqbeginDate = this.userDateTimes.beginDate;
             var reqEndDate = this.userDateTimes.endDate;
 
-            this.events = this.events.filter(function(event) {
-                return new Date(event.EventDate).toDateString() === reqStartDate && new Date(event.EndDate).toDateString() === reqEndDate;
+            this.listData = this.listData.filter(function(event) {
+                return event.EventDate.toDateString() === reqbeginDate && event.EndDate.toDateString() === reqEndDate;
             });
 
             return this;
@@ -44,11 +40,11 @@
 
         // provide begin/end datetimes, and this method will check for events that fall in that range..
         SPCalendarPro.prototype.matchDateTimes = function() {
-            var reqStartDT = this.userDateTimes.startDateTime;
+            var reqBeginDT = this.userDateTimes.beginDateTime;
             var reqEndDT = this.userDateTimes.endDateTime;
 
-            this.events = this.events.filter(function(event) {
-                return (new Date(event.EventDate) <= reqStartDT) && (new Date(event.EndDate) >= reqEndDT);
+            this.listData = this.listData.filter(function(event) {
+                return (event.EventDate <= reqBeginDT) && (event.EndDate >= reqEndDT);
             });
 
             return this;
@@ -56,16 +52,16 @@
 
         // checks for time conflicts between provided begin/end datetime and events
         SPCalendarPro.prototype.isTimeConflict = function() {
-            var reqStartDT = this.userDateTimes.startDateTime;
+            var reqBeginDT = this.userDateTimes.beginDateTime;
             var reqEndDT = this.userDateTimes.endDateTime;
 
-            this.events = this.events.filter(function(event) {
-                var arrStartDT = event.EventDate;
+            this.listData = this.listData.filter(function(event) {
+                var arrBeginDT = event.EventDate;
                 var arrEndDT = event.EndDate;
         
                 return (
-                    (reqStartDT <= arrStartDT && reqEndDT >= arrEndDT) || (arrStartDT < reqStartDT && arrEndDT > reqStartDT)
-                    || (arrStartDT < reqEndDT && arrEndDT > reqEndDT) || (reqStartDT < arrStartDT && reqEndDT > arrEndDT) );
+                    (reqBeginDT <= arrBeginDT && reqEndDT >= arrEndDT) || (arrBeginDT < reqBeginDT && arrEndDT > reqBeginDT)
+                    || (arrBeginDT < reqEndDT && arrEndDT > reqEndDT) || (reqBeginDT < arrBeginDT && reqEndDT > arrEndDT) );
             });
 
             return this;
@@ -86,7 +82,7 @@
                 '!=': function(a, b) { return a != b },
             }
 
-            this.events = this.events.filter(function(event) {
+            this.listData = this.listData.filter(function(event) {
                 return operators[operation](event[fieldName], value);
             });
 
@@ -102,7 +98,7 @@
 
         // // user directly supplies begin and end datetimes
         SPCalendarPro.prototype.getEventsAfterToday = function() {
-            this.events = this.events.filter(function(event) {
+            this.listData = this.listData.filter(function(event) {
                 var today = new Date();
                 return (event.EventDate >= today || event.EndDate >= today);
             });
@@ -115,60 +111,92 @@
             return this;
         }
 
+
         // to be used internally, only for formatted the provided datetimes into other formats.
-        function formatDateTimesToObj(startDT, endDT) {
+        function formatDateTimesToObj(beginDT, endDT) {
             return {
-                beginDateTime: startDT,
-                beginDate: startDT.toDateString(),
-                beginTime: startDT.toTimeString(),
+                beginDateTime: beginDT,
+                beginDate: new Date(beginDT.toDateString()),
+                beginTime: beginDT.toTimeString(),
                 endDateTime: endDT,
-                endDate: endDT.toDateString(),              
+                endDate: new Date(endDT.toDateString()),              
                 endTime: endDT.toTimeString()
             };
         }
 
         
         // get single, recurring, or all calendar events
-        var getCalendarEvents = function(obj, async, type) {
+        var getListData = function(obj, async, type, listType) {
+            var doAsync = (typeof async === 'undefined' || typeof async === undefined) ? true : async;
 
             // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
             var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + obj.listName + "</listName>";
             var soapFooter = "</soap:Body></soap:Envelope>";
 
-            var startRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
+            var beginRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
             var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions></GetListItems>";
+            var singleQuery = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where>/Query></query></GetListItems>";
+            var recurringQuery = "<query><Query><Where><And>" + beginRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
             var query = "";
+            var fieldNames = (obj.fields) ? getFieldNames() : '';
 
-            if (type === 'single') {
-                query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query></GetListItems>";
-            } else if (type === 'recurring') {
-                query = "<query><Query><Where><And>" + startRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
-            } else {
-                query = "<query><Query><Where>" + startRecurringCaml + endRecurringCaml;
+            if (listType === 'calendar') {
+                if (type === 'single') {
+                    query = singleQuery;
+                } else if (type === 'recurring') {
+                    query = recurringQuery;
+                } else {
+                    query = "<query><Query><Where>" + beginRecurringCaml + endRecurringCaml;
+                }
+            } else if (listType === 'list') {
+                query = "<viewFields><ViewFields>" + fieldNames + "</ViewFields></viewFields></GetListItems>";
+            }
+            
+            function getFieldNames() {
+                var viewFields = '';
+                for (var i = 0; i < obj.fields.length; i++) {
+                    viewFields += "<FieldRef Name='" + obj.fields[i] + "'/>";
+                }
+                return viewFields;
             }
 
-            var soapStr = soapHeader + query + soapFooter;
-            postAjax(soapStr);
+            postAjax(soapHeader + query + soapFooter);
 
             // make ajax request. fires synchronously by default. No j-word needed!
             function postAjax(soapStr) {
-                var url = obj.soapUrl;
                 var xhr = new XMLHttpRequest();
-
-                xhr.open('POST', url, async);
+                xhr.open('POST', obj.SPInfo.soapURL, doAsync);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
                 xhr.send(soapStr);
 
-                function getEvents() {
-                    if (xhr.readyState == 4 && xhr.status == 200) {
-                        obj.events = XmlToJson( xhr.responseXML.querySelectorAll('*') );
-                        return (obj.callback) ? obj.callback(obj) : obj;
-                    }
+                xhr.onerror = function() {
+                    reportError(xhr);
                 }
+                
+                return (doAsync === true) ? xhr.onload = function() { return getEvents(xhr) } : getEvents(xhr);
+            }
 
-                return (async === true) ? xhr.onload = function() { getEvents() } : getEvents();
-            }    
+            function reportError(xhr) {
+                if (xhr.status == 500) {
+                    return obj.error = {
+                        errorCode: xhr.responseText.split('<errorcode xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorcode>')[0],
+                        errorString: xhr.responseText.split('<errorstring xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorstring>')[0],
+                        faultString: xhr.responseText.split('<faultstring>')[1].split('</faultstring>')[0],
+                    }
+                } else {
+                    return obj.error = "Request failed.";
+                }
+            }
+
+            function getEvents(xhr) {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    obj.listData = XmlToJson( xhr.responseXML.querySelectorAll('*') );
+                    return obj.callback(obj);
+                } else {
+                    reportError(xhr);
+                }
+            }
 
             // accepts XML, returns an array of objects, each of which are calendar events.
             function XmlToJson(xml) {
@@ -179,21 +207,26 @@
                     var rowAttrs = xml[i].attributes;
 
                     if (xml[i].nodeName === 'z:row') {
+
                         for (var attrNum = 0; attrNum < rowAttrs.length; attrNum++) {
-                            var thisAttrName = rowAttrs[attrNum].name;
-                            var thisObjectName = thisAttrName.split("ows_")[1];
-                            
-                            row[thisObjectName] = (thisObjectName === 'EventDate' || thisObjectName === 'EndDate')
-                                ? new Date(rowAttrs[attrNum].value.replace('-', '/') )
+                            var thisAttrName = rowAttrs[attrNum].name.split("ows_")[1];
+                                                    
+                            row[thisAttrName] = (thisAttrName === 'EventDate' || thisAttrName === 'EndDate')
+                                ? new Date(rowAttrs[attrNum].value.replace('-', '/'))
                                 : rowAttrs[attrNum].value;
                         }
-                        eventArr.push(row);
+
+                        if (listType === 'calendar' && obj.getEventsAfterDate) {
+                            if (row.EventDate >= obj.getEventsAfterDate) eventArr.push(row); 
+                        } else {
+                            eventArr.push(row);
+                        }
+
                     }
                 }
                 return eventArr;
             }
-
-            return obj.events;
+            return obj.listData;
         }
 
         String.prototype.formatInputToHours = function() {
@@ -225,38 +258,60 @@
                 }
             }
 
-            var startDateTimes = findDateTimes(row1);
+            var beginDateTimes = findDateTimes(row1);
             var endDateTimes = findDateTimes(row2);
 
             return {
-                userBeginDT: new Date( startDateTimes.date + ' ' + startDateTimes.time() ),
+                userBeginDT: new Date( beginDateTimes.date + ' ' + beginDateTimes.time() ),
                 userEndDT: new Date( endDateTimes.date + ' ' + endDateTimes.time() )
             }
         }
 
 
         // the main object we use.
-        function SPCalendarPro(obj) {
+        function SPCalendarPro(obj, listType) {
             this.listName = obj.listName;
             this.userDateTimes = {};
-            this.soapUrl = (obj.sourceSite) ? obj.sourceSite + '/_vti_bin/Lists.asmx' : getSPEnvInfo().soapURL;
+            this.SPInfo = getSPEnvInfo(obj.sourceSite);
+            this.getEventsAfterDate = (obj.getEventsAfterDate) ? obj.getEventsAfterDate : false;
+            this.fields = obj.fields ? obj.fields : null;
+            
+            this.listData = getListData(this, obj.async, obj.type, listType);
 
             this.callback = function() {
                 return (obj.callback) ? obj.callback(this) : null;
             }
 
-            this.events = getCalendarEvents(this, obj.async, obj.type);
             return this;
         }
 
         var data = {
-            getEvents: function(obj) {
-                return new SPCalendarPro(obj);
+            getCalendarEvents: function(obj) {
+                return new SPCalendarPro(obj, 'calendar');
+            },
+            
+            getListItems: function(obj) {
+                return new SPCalendarPro(obj, 'list');
             },
 
             getDateTimesFromForm: function(row1, row2) {
                 var time = convertFormDateTimes(row1, row2);
                 return formatDateTimesToObj( time.userBeginDT, time.userEndDT );
+            },
+
+            disableDragAndDrop: function() {
+                ExecuteOrDelayUntilScriptLoaded(disableDragDrop, 'SP.UI.ApplicationPages.Calendar.js');
+                function disableDragDrop() {
+                    var calendarCreate = SP.UI.ApplicationPages.CalendarContainerFactory.create;
+                    SP.UI.ApplicationPages.CalendarContainerFactory.create = function(elem, cctx, viewType, date, startupData) {
+                        if (cctx.dataSources && cctx.dataSources instanceof Array && cctx.dataSources.length > 0) {
+                            for (var i = 0; i < cctx.dataSources.length; i++) {
+                                cctx.dataSources[i].disableDrag = true;
+                            }
+                        }
+                        calendarCreate(elem, cctx, viewType, date, startupData);
+                    }
+                }
             },
             
         }
