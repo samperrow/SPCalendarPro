@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 2018.01
+* Version 2018.02
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @category Plugins/SPCalendarPro
@@ -229,14 +229,13 @@
 
         // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use.
         // by default this grabs the first and second date/time rows from a form.
-        var iframeContent = document.getElementById('formIframe').contentDocument;
 
         var convertFormDateTimes = function(row1, row2) {
             row1 = (!row1) ? 0 : row1;
             row2 = (!row2) ? 1 : row2;
 
             function findDateTimes(row) {
-                var dtParentElem = iframeContent.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[row].parentNode.parentNode;
+                var dtParentElem = document.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[row].parentNode.parentNode;
                 var timeElem = dtParentElem.getElementsByClassName('ms-dttimeinput')[0];
                 
                 if (timeElem) {
