@@ -20,7 +20,7 @@
 
             return {
                 year: (spVersion === 15) ? '2013' : '2010',
-                soapURL: (typeof site !== 'undefined')
+                soapURL: (typeof site === 'string' && site.length > 0)
                     ? site + '/_vti_bin/Lists.asmx'
                     : (spVersion === 15) ? _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx' : document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx'
             }
