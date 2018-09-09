@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 2018.03
+* Version 2018.04
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @category Plugins/SPCalendarPro
@@ -28,8 +28,8 @@
 
         // checks if supplied datetimes are the same date as ones in calendar list.
         SPCalendarPro.prototype.isSameDate = function() {
-            var reqbeginDate = this.userDateTimes.beginDate;
-            var reqEndDate = this.userDateTimes.endDate;
+            var reqbeginDate = this.userDateTimes.begin.beginDate;
+            var reqEndDate = this.userDateTimes.end.endDate;
 
             this.listData = this.listData.filter(function(event) {
                 return event.EventDate.toDateString() === reqbeginDate && event.EndDate.toDateString() === reqEndDate;
@@ -40,8 +40,8 @@
 
         // provide begin/end datetimes, and this method will check for events that fall in that range..
         SPCalendarPro.prototype.matchDateTimes = function() {
-            var reqBeginDT = this.userDateTimes.beginDateTime;
-            var reqEndDT = this.userDateTimes.endDateTime;
+            var reqBeginDT = this.userDateTimes.begin.beginDateTime;
+            var reqEndDT = this.userDateTimes.end.endDateTime;
 
             this.listData = this.listData.filter(function(event) {
                 return (event.EventDate <= reqBeginDT) && (event.EndDate >= reqEndDT);
@@ -52,20 +52,19 @@
 
         // checks for time conflicts between provided begin/end datetime and events
         SPCalendarPro.prototype.isTimeConflict = function() {
-            var reqBeginDT = this.userDateTimes.beginDateTime;
-            var reqEndDT = this.userDateTimes.endDateTime;
+            var reqBeginDT = this.userDateTimes.begin.beginDateTime;
+            var reqEndDT = this.userDateTimes.end.endDateTime;
 
-            if (this.listData) {
-                this.listData = this.listData.filter(function(event) {
+            this.listData = this.listData.filter(function(event) {
 
-                    var arrBeginDT = event.EventDate;
-                    var arrEndDT = event.EndDate;
-        
-                    return (
-                        (reqBeginDT <= arrBeginDT && reqEndDT >= arrEndDT) || (arrBeginDT < reqBeginDT && arrEndDT > reqBeginDT)
-                        || (arrBeginDT < reqEndDT && arrEndDT > reqEndDT) || (reqBeginDT < arrBeginDT && reqEndDT > arrEndDT) );
-                });
-            }
+                var arrBeginDT = event.EventDate;
+                var arrEndDT = event.EndDate;
+    
+                return (
+                    (reqBeginDT <= arrBeginDT && reqEndDT >= arrEndDT) || (arrBeginDT < reqBeginDT && arrEndDT > reqBeginDT)
+                    || (arrBeginDT < reqEndDT && arrEndDT > reqEndDT) || (reqBeginDT < arrBeginDT && reqEndDT > arrEndDT) );
+            });
+            
             return this;
         }
 
@@ -91,44 +90,27 @@
             return this;
         }
 
-        // this will convert date/time info from a sharepoint form into proper date objects to be used later.
-        SPCalendarPro.prototype.getDateTimesFromForm = function(row1, row2) {
-            var formattedDT = convertFormDateTimes(row1, row2);
-            this.userDateTimes = formatDateTimesToObj(formattedDT.userBeginDT, formattedDT.userEndDT);
-            return this;
-        }
-
-        // user directly supplies begin and end datetimes
-        SPCalendarPro.prototype.getEventsAfterToday = function() {
-            this.listData = this.listData.filter(function(event) {
-                var today = new Date();
-                return (event.EventDate >= today || event.EndDate >= today);
-            });
-            return this;
-        }
-
-        // user directly supplies begin and end datetimes
-        SPCalendarPro.prototype.provideDateTimes = function(datetime1, datetime2) {
-            this.userDateTimes = formatDateTimesToObj(datetime1, datetime2);
-            return this;
-        }
-
-
         // to be used internally, only for formatted the provided datetimes into other formats.
         function formatDateTimesToObj(beginDT, endDT) {
             return {
-                beginDateTime: beginDT,
-                beginDate: new Date(beginDT.toDateString()),
-                beginTime: beginDT.toTimeString(),
-                endDateTime: endDT,
-                endDate: new Date(endDT.toDateString()),              
-                endTime: endDT.toTimeString()
+                begin: {
+                    beginDateTime: beginDT,
+                    beginDate: new Date(beginDT.toDateString()),
+                    beginTime: beginDT.toTimeString()
+                },
+
+                end: {
+                    endDateTime: endDT,
+                    endDate: new Date(endDT.toDateString()),              
+                    endTime: endDT.toTimeString()
+                }
+
             };
         }
 
         
         // get single, recurring, or all calendar events
-        var getListData = function(spCalProObj, userObj, listType) {
+        var getListData = function(spCalProObj, userObj, listType, listSourceSite) {
             var doAsync = (typeof userObj.async === 'undefined') ? true : userObj.async;
 
             // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
@@ -138,7 +120,7 @@
             var beginRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
             var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions>";
 
-            var singleQuery = (spCalProObj.SPInfo.year === '2010')
+            var singleQuery = (listSourceSite.year === '2010')
                 ? "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>"
                 : "<query><Query><Where><IsNull><FieldRef Name='fRecurrence'/></IsNull></Where></Query></query>";
 
@@ -175,7 +157,7 @@
             // make ajax request. fires synchronously by default. No j-word needed!
             function postAjax(soapStr) {
                 var xhr = new XMLHttpRequest();
-                xhr.open('POST', spCalProObj.SPInfo.soapURL, doAsync);
+                xhr.open('POST', listSourceSite.soapURL, doAsync);
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
                 xhr.send(soapStr);
@@ -274,17 +256,20 @@
         // the main object we use.
         function SPCalendarPro(obj, listType) {
             this.listName = obj.listName;
-            this.userDateTimes = {};
-            this.SPInfo = getSPEnvInfo(obj.sourceSite);
+
+            this.getEventsTodayAndAfter = (obj.getEventsTodayAndAfter) ? obj.getEventsTodayAndAfter : null;
             this.getEventsAfterDate = (obj.getEventsAfterDate) ? obj.getEventsAfterDate : null;
             this.getEventsBeforeDate = (obj.getEventsBeforeDate) ? obj.getEventsBeforeDate : null;
             this.fields = obj.fields ? obj.fields : null;
-            
+            this.userDateTimes = (obj.userDateTimes) ? obj.userDateTimes : null;
+
+            var listSourceSite = getSPEnvInfo(obj.sourceSite);
+
             this.callback = function() {
                 return (obj.callback) ? obj.callback(this) : null;
             }
             
-            this.listData = getListData(this, obj, listType);
+            this.listData = getListData(this, obj, listType, listSourceSite);
             return this;
         }
 
@@ -301,6 +286,10 @@
             getDateTimesFromForm: function(row1, row2) {
                 var time = convertFormDateTimes(row1, row2);
                 return formatDateTimesToObj( time.userBeginDT, time.userEndDT );
+            },
+
+            provideDateTimes: function(dateTime1, dateTime2) {
+                return formatDateTimesToObj(dateTime1, dateTime2);
             },
 
             disableDragAndDrop: function() {
