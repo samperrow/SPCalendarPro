@@ -79,6 +79,3 @@ f) The above four steps are executed in the callback method, which is checkApptA
     
 
 Easy enough. Full documentation can be found here: [https://spcalendarpro.sharepointhacks.com](https://spcalendarpro.sharepointhacks.com)
-
-
-### This library is still in its beta phase, so you can expect numerous updates, revisions, bug fixes, and improvements over the coming weeks.
