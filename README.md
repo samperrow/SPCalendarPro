@@ -28,35 +28,57 @@ The painful process of obtaining recurring events, matching user provided dateti
 
 This example below will:
 
-a) Asynchronously collect all events (single and recurring) from the 'Appointments' calendar list. 
-
-b) Return only the events after today.
+a) Asynchronously collect all events (single and recurring) from the "StaffSchedule", "SurgeonSchedule", and the "Appointments" calendar lists. 
 
 c) Convert user provided datetime information from a SharePoint form into proper date objects for use. The "0,1" parameters specify which datetime field elements on a form are to be converted.
 
 d) Determine if user provided datetime values pose a time conflict with any events from the Appointments list.
 
-e) Filters the returned events to match only the ones with a Status of 'Confirmed'.
+e) Determine if there user provided date time values coincide with availabilites in the "StaffSchedule" and the "SurgeonSchedule" calendars.
 
-f) The above three steps are executed in the callback method, which is getEvents().
+f) The above four steps are executed in the callback method, which is checkApptAvailability().
 
-    var data = {
-        listName: 'Appointments',
-        async: true,
-        type: '',
-        getEventsAfterDate: new Date(),
-        callback: getEvents,
+    var patientTimes = spcalpro.getDateTimesFromForm(0,1);   // Convert the start and end datetimes on a SharePoint form into valid JavaScript dates.
+
+    var staffSchedule = spcalpro.getCalendarEvents({
+        listName: "StaffSchedule",
+        userDateTimes: patientTimes,
+        callback: checkApptAvailability
+    });
+
+    var surgeonSchedule = spcalpro.getCalendarEvents({
+        listName: "SurgeonSchedule",
+        userDateTimes: patientTimes,
+        callback: checkApptAvailability
+    });
+
+    var appointments = spcalpro.getCalendarEvents({
+        listName: "Appointments",
+        type: "single",                                 // Returns only single events.
+        userDateTimes: patientTimes,
+        callback: checkApptAvailability
+    });
+
+    function checkApptAvailability() {
+
+        // Ensure all calendar data has been collected before we filter the events.
+        if ( staffSchedule.listData && surgeonSchedule.listData && appointments.listData) {
+            staffSchedule.matchDateTimes();
+            surgeonSchedule.matchDateTime();
+            appointments.isTimeConflict();
+
+            if ( staffSchedule.listData.length > 0 && surgeonSchedule.listData.length > 0 && appointments.listData.length < 1 ) {
+                return confirmAppt(true);
+            }
+        }
     }
 
-    spcalpro.getCalendarEvents(data);
-
-    function getEvents(obj) {
-        var events = obj.getDateTimesFromForm(0,1).isTimeConflict().where('Status = Confirmed');
-        console.table(events.listData);
+    function confirmAppt(status) {
+        alert("Your appointment has been confirmed!");
     }
     
 
-This will display all events from the Appointments calendar after today, which pose a time conflict with the user specified date times from a form, and where the events' Status is Confirmed.
+Easy enough. Full documentation can be found here: [https://spcalendarpro.sharepointhacks.com](https://spcalendarpro.sharepointhacks.com)
 
 
 ### This library is still in its beta phase, so you can expect numerous updates, revisions, bug fixes, and improvements over the coming weeks.
