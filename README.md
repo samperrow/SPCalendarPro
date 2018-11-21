@@ -20,7 +20,7 @@ The painful process of obtaining recurring events, matching user provided dateti
 6) Returns list items along with calendar events.
 7) Option to disable calendar drag and drop: spcalpro.disableDragAndDrop()
 8) Requires zero dependencies! Everything is pure vanilla JS.
-9) Compatible down to SharePoint 2010.
+9) Compatible for all SharePoint versions- 2010, 2013, 2016, 2019, and Online.
 
 
 
@@ -51,6 +51,5 @@ f) Compare the returned calendar events to see if any pose a time conflict with 
         var homerJSimpson = obj.isTimeConflict().where('LinkTitle = Homer Simpson').data;
         console.table( homerJSimpson );
     });
-    
 
 Full documentation can be found here: [https://spcalendarpro.sharepointhacks.com](https://spcalendarpro.sharepointhacks.com)
