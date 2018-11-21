@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 1.2.1
+* Version 1.2.1.1
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @category Plugins/SPCalendarPro
@@ -29,14 +29,12 @@
 
     // checks if supplied datetimes are the same date as ones in calendar list.
     SPCalendarPro.prototype.isSameDate = function () {
-        var reqbeginDate = this.userDateTimes.begin.beginDate;
-        var reqEndDate = this.userDateTimes.end.endDate;
+        var reqbeginDate = this.userDateTimes.begin.beginDate.toDateString();
+        var reqEndDate = this.userDateTimes.end.endDate.toDateString();
 
-        this.listData = this.listData.filter(function (event) {
+        return this.data.filter(function (event) {
             return event.EventDate.toDateString() === reqbeginDate && event.EndDate.toDateString() === reqEndDate;
         });
-
-        return this;
     }
 
     // provide begin/end datetimes, and this method will check for events that fall in that range..
@@ -44,11 +42,9 @@
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
-        this.listData = this.listData.filter(function (event) {
+        return this.data.filter(function (event) {
             return (event.EventDate <= reqBeginDT) && (event.EndDate >= reqEndDT);
         });
-
-        return this;
     }
 
     // checks for time conflicts between provided begin/end datetime and events
@@ -56,8 +52,7 @@
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
-        this.listData = this.listData.filter(function (event) {
-
+        return this.data.filter(function (event) {
             var arrBeginDT = event.EventDate;
             var arrEndDT = event.EndDate;
 
@@ -65,8 +60,6 @@
                 (reqBeginDT <= arrBeginDT && reqEndDT >= arrEndDT) || (arrBeginDT < reqBeginDT && arrEndDT > reqBeginDT)
                 || (arrBeginDT < reqEndDT && arrEndDT > reqEndDT) || (reqBeginDT < arrBeginDT && reqEndDT > arrEndDT));
         });
-
-        return this;
     }
 
     // couldn't do without a where clause now could we?
@@ -84,11 +77,9 @@
             '!=': function (a, b) { return a != b }
         }
 
-        this.listData = this.listData.filter(function (event) {
+        return this.data.filter(function (event) {
             return operators[operation](event[fieldName], value);
         });
-
-        return this;
     }
 
     // to be used internally, only for formatted the provided datetimes into other formats.
@@ -105,7 +96,6 @@
                 endDate: new Date(endDT.toDateString()),
                 endTime: endDT.toTimeString()
             }
-
         };
     }
 
@@ -190,11 +180,9 @@
             }
 
             if (userObj.callback) {
-                return userObj.callback(spCalProObj.listData, spCalProObj.error);
+                return userObj.callback(spCalProObj.data, spCalProObj);
             } else if (spCalProObj.userCallback) {
-                return spCalProObj.userCallback(spCalProObj.listData, spCalProObj.error);
-            } else if (doAsync === true && !userObj.callback) {
-                console.error('You must specify a callback method as a property value in the object.');
+                return spCalProObj.userCallback(spCalProObj.data, spCalProObj);
             } else {
                 return spCalProObj;
             }
@@ -203,24 +191,18 @@
 
         function XhrToObj(xhr) {
             if (xhr.responseXML) {
-                return spCalProObj.listData = XmlToJson(xhr.responseXML.querySelectorAll('*'));
+                return spCalProObj.data = XmlToJson(xhr.responseXML.querySelectorAll('*'));
             } else if (!xhr.responseXML && xhr.responseText) {                                      // in case the list is an external list. 
                 var xml = StringToXML(xhr.responseText.replace(/&#22;|&#0;/g, ''));                 // removes HTML chars that makes the XML parser fail.
-                return spCalProObj.listData = XmlToJson(xml.querySelectorAll('*'));
+                return spCalProObj.data = XmlToJson(xml.querySelectorAll('*'));
             }
         }
 
         function getErrorData(xhr) {
             spCalProObj.error = {
-                errorCode: function() {
-                    return (/<errorcode xmlns="http:\/\/schemas.microsoft.com\/sharepoint\/soap\/">/.test(xhr.responseText)) ? xhr.responseText.split('<errorcode xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorcode>')[0] : 'NA';
-                }(),
-                errorString: function() {
-                    return (/<errorstring xmlns="http:\/\/schemas.microsoft.com\/sharepoint\/soap\/">/.test(xhr.responseText)) ? xhr.responseText.split('<errorstring xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorstring>')[0] : 'NA';
-                }(),
-                faultString: function() {
-                    return (/<faultstring>/.test(xhr.responseText)) ? xhr.responseText.split('<faultstring>')[1].split('</faultstring>')[0] : 'NA';
-                }()
+                errorCode: (/<errorcode xmlns="http:\/\/schemas.microsoft.com\/sharepoint\/soap\/">/.test(xhr.responseText)) ? xhr.responseText.split('<errorcode xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorcode>')[0] : '',
+                errorString: (/<errorstring xmlns="http:\/\/schemas.microsoft.com\/sharepoint\/soap\/">/.test(xhr.responseText)) ? xhr.responseText.split('<errorstring xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorstring>')[0] : '',
+                faultString: (/<faultstring>/.test(xhr.responseText)) ? xhr.responseText.split('<faultstring>')[1].split('</faultstring>')[0] : ''
             }
             console.error( spCalProObj.error);
             return spCalProObj.error;
@@ -323,8 +305,8 @@
             return (obj.callback) ? obj.callback(this) : null;
         }
 
-        this.listData = getListData(this, obj, listType, listSourceSite);
-        return this.listData;
+        this.data = getListData(this, obj, listType, listSourceSite);
+        return this;
     }
 
 
