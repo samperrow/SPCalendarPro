@@ -1,8 +1,8 @@
 # SPCalendarPro
 An ultra lightweight, dependency-free JavaScript library to easily manage SharePoint calendar events.
 
-* 15 KB unminified, with comments.
-* 7 KB minified.
+* 16 KB unminified, with comments.
+* 8 KB minified.
 
 
 ## Purpose
@@ -28,54 +28,29 @@ The painful process of obtaining recurring events, matching user provided dateti
 
 This example below will:
 
-a) Asynchronously collect all events (single and recurring) from the "StaffSchedule", "SurgeonSchedule", and the "Appointments" calendar lists. 
+a) Asynchronously collect all events (single and recurring) from the "StaffSchedule" calendar list. 
 
-c) Convert user provided datetime information from a SharePoint form into proper date objects for use. The "0,1" parameters specify which datetime field elements on a form are to be converted.
+b) Convert user provided datetime information from a SharePoint form into proper date objects for use. The "0,1" parameters specify which datetime field elements on a form are to be converted.
 
-d) Determine if user provided datetime values pose a time conflict with any events from the Appointments list.
+c) Return only the events that occur between today and one month from now.
 
-e) Determine if there user provided date time values coincide with availabilites in the "StaffSchedule" and the "SurgeonSchedule" calendars.
+d) Gather the list data from a different subsite than the originating one in the same site collection.
 
-f) The above four steps are executed in the callback method, which is checkApptAvailability().
+e) Deliver a error message in the console if the request fails.
 
-    var patientTimes = spcalpro.getDateTimesFromForm(0,1);   // Convert the start and end datetimes on a SharePoint form into valid JavaScript dates.
+f) Compare the returned calendar events to see if any pose a time conflict with the datetimes provided in the user form, and then determine which items have a LinkTitle of "Homer Simpson".
 
-    var staffSchedule = spcalpro.getCalendarEvents({
-        listName: "StaffSchedule",
-        userDateTimes: patientTimes,
-        callback: checkApptAvailability
+    spcalpro.getCalendarEvents({
+        listName: 'StaffSchedule',
+        userDateTimes: spcalpro.getDateTimesFromForm(0,1),
+        getEventsAfterDate: new Date(),
+        getEventsBeforeDate: new Date(new Date().getTime() + 2592000000),       // one month from today
+        sourceSite: 'https://example.com/subsite'
+    }).ready(function(data, obj) {
+        if (obj.error) console.error( obj.error );
+        var homerJSimpson = obj.isTimeConflict().where('LinkTitle = Homer Simpson').data;
+        console.table( homerJSimpson );
     });
-
-    var surgeonSchedule = spcalpro.getCalendarEvents({
-        listName: "SurgeonSchedule",
-        userDateTimes: patientTimes,
-        callback: checkApptAvailability
-    });
-
-    var appointments = spcalpro.getCalendarEvents({
-        listName: "Appointments",
-        type: "single",                                 // Returns only single events.
-        userDateTimes: patientTimes,
-        callback: checkApptAvailability
-    });
-
-    function checkApptAvailability() {
-
-        // Ensure all calendar data has been collected before we filter the events.
-        if ( staffSchedule.listData && surgeonSchedule.listData && appointments.listData) {
-            staffSchedule.matchDateTimes();
-            surgeonSchedule.matchDateTime();
-            appointments.isTimeConflict();
-
-            if ( staffSchedule.listData.length > 0 && surgeonSchedule.listData.length > 0 && appointments.listData.length < 1 ) {
-                return confirmAppt(true);
-            }
-        }
-    }
-
-    function confirmAppt(status) {
-        alert("Your appointment has been confirmed!");
-    }
     
 
-Easy enough. Full documentation can be found here: [https://spcalendarpro.sharepointhacks.com](https://spcalendarpro.sharepointhacks.com)
+Full documentation can be found here: [https://spcalendarpro.sharepointhacks.com](https://spcalendarpro.sharepointhacks.com)
