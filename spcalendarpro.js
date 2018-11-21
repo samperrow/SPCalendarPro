@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 1.2.1.1
+* Version 1.2.1.2
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @category Plugins/SPCalendarPro
@@ -32,9 +32,11 @@
         var reqbeginDate = this.userDateTimes.begin.beginDate.toDateString();
         var reqEndDate = this.userDateTimes.end.endDate.toDateString();
 
-        return this.data.filter(function (event) {
+        this.data = this.data.filter(function (event) {
             return event.EventDate.toDateString() === reqbeginDate && event.EndDate.toDateString() === reqEndDate;
         });
+
+        return this;
     }
 
     // provide begin/end datetimes, and this method will check for events that fall in that range..
@@ -42,9 +44,11 @@
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
-        return this.data.filter(function (event) {
+        this.data = this.data.filter(function (event) {
             return (event.EventDate <= reqBeginDT) && (event.EndDate >= reqEndDT);
         });
+
+        return this;
     }
 
     // checks for time conflicts between provided begin/end datetime and events
@@ -52,7 +56,7 @@
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
-        return this.data.filter(function (event) {
+        this.data = this.data.filter(function (event) {
             var arrBeginDT = event.EventDate;
             var arrEndDT = event.EndDate;
 
@@ -60,6 +64,8 @@
                 (reqBeginDT <= arrBeginDT && reqEndDT >= arrEndDT) || (arrBeginDT < reqBeginDT && arrEndDT > reqBeginDT)
                 || (arrBeginDT < reqEndDT && arrEndDT > reqEndDT) || (reqBeginDT < arrBeginDT && reqEndDT > arrEndDT));
         });
+
+        return this;
     }
 
     // couldn't do without a where clause now could we?
@@ -77,9 +83,11 @@
             '!=': function (a, b) { return a != b }
         }
 
-        return this.data.filter(function (event) {
+        this.data = this.data.filter(function (event) {
             return operators[operation](event[fieldName], value);
         });
+
+        return this;
     }
 
     // to be used internally, only for formatted the provided datetimes into other formats.

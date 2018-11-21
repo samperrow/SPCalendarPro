@@ -28,21 +28,28 @@ The painful process of obtaining recurring events, matching user provided dateti
 
 This example below will:
 
-a) Asynchronously collect all events (single and recurring) from the "StaffSchedule" calendar lists. 
+a) Asynchronously collect all events (single and recurring) from the "StaffSchedule" calendar list. 
 
-b) Return only the events that occur between today and one month from now.
+b) Convert user provided datetime information from a SharePoint form into proper date objects for use. The "0,1" parameters specify which datetime field elements on a form are to be converted.
 
-c) Return data from a calendar list that is located at a different subsite than the present one.
+c) Return only the events that occur between today and one month from now.
+
+d) Gather the list data from a different subsite than the originating one in the same site collection.
+
+e) Deliver a error message in the console if the request fails.
+
+f) Compare the returned calendar events to see if any pose a time conflict with the datetimes provided in the user form, and then determine which items have a LinkTitle of "Homer Simpson".
 
     spcalpro.getCalendarEvents({
         listName: 'StaffSchedule',
+        userDateTimes: spcalpro.getDateTimesFromForm(0,1),
         getEventsAfterDate: new Date(),
         getEventsBeforeDate: new Date(new Date().getTime() + 2592000000),       // one month from today
-        sourceSite: 'https://example.com/Schedules'
-    }).ready(function(data, error) {
-        if (error) console.error(error);
-        console.table(data);
+        sourceSite: 'https://example.com/subsite'
+    }).ready(function(data, obj) {
+        if (obj.error) console.error( obj.error );
+        var homerJSimpson = obj.isTimeConflict().where('LinkTitle = Homer Simpson').data;
+        console.table( homerJSimpson );
     });
-        
 
-Easy enough. Full documentation can be found here: [https://spcalendarpro.sharepointhacks.com](https://spcalendarpro.sharepointhacks.com)
+Full documentation can be found here: [https://spcalendarpro.sharepointhacks.com](https://spcalendarpro.sharepointhacks.com)
