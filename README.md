@@ -1,5 +1,6 @@
 # SPCalendarPro
-An ultra lightweight, dependency-free JavaScript library to easily manage SharePoint calendar events.
+
+## An ultra lightweight, dependency-free JavaScript library to easily manage SharePoint calendar events.
 
 * 16 KB unminified, with comments.
 * 8 KB minified.
