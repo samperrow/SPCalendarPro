@@ -4,7 +4,7 @@
     "description": "JavaScript library to easily manage SharePoint calendar events",
     "main": "dist/spcalendarpro.js",
     "scripts": {
-        "test": "istanbul cover node_modules/jasmine/bin/jasmine.js -verbose JASMINE_CONFIG_PATH=./jasmine.json",
+        "test": "istanbul cover dist/spcalendarpro.js",
         "report-coverage": "codecov"
     },
     "repository": {
