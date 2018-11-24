@@ -27,11 +27,12 @@ The painful process of obtaining recurring events, matching user provided dateti
 ## Example
 
 1) Asynchronously collect all events (single and recurring) from the `StaffSchedule` calendar list. 
-2) Convert user provided datetime information from a SharePoint form into proper date objects for use. The `0,1` parameters specify which datetime field elements on a form are to be converted.
+2) Convert user provided datetime information from a SharePoint form into proper date objects for use. The "0,1" parameters specify which datetime field elements on a form are to be converted.
 3) Return only the events that occur between today and one month from now.
 4) Gather the list data from a different subsite than the originating one in the same site collection.
 5) Deliver a error message in the console if the request fails.
-6) Compare the returned calendar events to see if any pose a time conflict with the datetimes provided in the user form, and then determine which items have a `LinkTitle` of `Homer Simpson`.
+6) Compare the returned calendar events to see if any pose a time conflict with the datetimes provided in the user form, and then determine which items have a LinkTitle of `Homer Simpson`.
+
     spcalpro.getCalendarEvents({
         listName: 'StaffSchedule',
         userDateTimes: spcalpro.getDateTimesFromForm(0,1),
