@@ -1,9 +1,8 @@
 /*
 * @name SPCalendarPro
-* Version 1.2.1.2
+* Version 1.2.2
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
-* @category Plugins/SPCalendarPro
 * @documentation https://spcalendarpro.sharepointhacks.com
 * @author Sam Perrow sam.perrow399@gmail.com
 *
@@ -53,6 +52,7 @@
 
     // checks for time conflicts between provided begin/end datetime and events
     SPCalendarPro.prototype.isTimeConflict = function () {
+
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
@@ -107,6 +107,7 @@
         };
     }
 
+    // Converts large string from external list to valid XML
     function StringToXML(oString) {
         return (window.ActiveXObject)
             ? new ActiveXObject("Microsoft.XMLDOM").loadXML(oString)
@@ -114,53 +115,49 @@
     }
 
 
-    // get single, recurring, or all calendar events
+    // Query the calendar or list and return the items
     var getListData = function (spCalProObj, userObj, listType, listSourceSite) {
         var doAsync = (typeof userObj.async === 'undefined') ? true : userObj.async;
 
-        // set up the CAML query. returns single and recurring events by default, unless otherwise specified.
-        var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + userObj.listName + "</listName>";
-        var soapFooter = "</soap:Body></soap:Envelope>";
+        // Create the CAML query. returns single and recurring events by default, unless otherwise specified.
+        function createCAMLQuery() {
+            var soapHeader = "<soap:Envelope xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema' xmlns:soap='http://schemas.xmlsoap.org/soap/envelope/'><soap:Body><GetListItems xmlns='http://schemas.microsoft.com/sharepoint/soap/'><listName>" + userObj.listName + "</listName>";
+            var soapFooter = "</soap:Body></soap:Envelope>";
+            var beginRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
+            var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions>";
+            var singleQuery = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>";
+            var recurringQuery = "<query><Query><Where><And>" + beginRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
+            var query = "";
+            var fieldNames = (userObj.fields) ? getFieldNames() : '';
 
-        var beginRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
-        var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions>";
-
-        var singleQuery = (listSourceSite.year === '2010')
-            ? "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>"
-            : "<query><Query><Where><IsNull><FieldRef Name='fRecurrence'/></IsNull></Where></Query></query>";
-
-        var recurringQuery = "<query><Query><Where><And>" + beginRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
-        var query = "";
-        var fieldNames = (userObj.fields) ? getFieldNames() : '';
-
-        if (listType === 'calendar') {
-            if (userObj.type === 'single') {
-                query = singleQuery;
-            } else if (userObj.type === 'recurring') {
-                query = recurringQuery;
-            } else {
-                query = "<query><Query><Where>" + beginRecurringCaml + endRecurringCaml;
+            if (userObj.CamlQuery) {
+                query = userObj.CamlQuery;
+            } else if (listType === 'calendar') {
+                if (userObj.type === 'single') query = singleQuery;
+                else if (userObj.type === 'recurring') query = recurringQuery;
+                else query = "<query><Query><Where>" + beginRecurringCaml + endRecurringCaml;
+            } else if (listType === 'list' && fieldNames === "") {
+                query = "<viewFields><ViewFields></ViewFields></viewFields>";
             }
 
-            query += "<viewFields><ViewFields>" + fieldNames + "</ViewFields></viewFields></GetListItems>";
-
-        } else if (listType === 'list') {
-
-            if (userObj.whereCAMLQuery) {
-                query = userObj.whereCAMLQuery;
-            }
-            query += "<viewFields><ViewFields>" + fieldNames + "</ViewFields></viewFields></GetListItems>";
+            query += fieldNames + "</GetListItems>";
+            postAjax(soapHeader + query + soapFooter);
         }
+        createCAMLQuery();
+
 
         function getFieldNames() {
-            var viewFields = '<FieldRef Name="fRecurrence"/>';
+            var viewFields = (listType === 'calendar') ? '<FieldRef Name="fRecurrence"/>' : '';
+            
             for (var i = 0; i < userObj.fields.length; i++) {
-                viewFields += "<FieldRef Name='" + userObj.fields[i] + "'/>";
+                if (typeof userObj.fields[i] === "string") {
+                    viewFields += "<FieldRef Name='" + userObj.fields[i] + "'/>";
+                }
             }
-            return viewFields;
+
+            return "<viewFields><ViewFields>" + viewFields + "</ViewFields></viewFields>";
         }
 
-        postAjax(soapHeader + query + soapFooter);
 
         // make ajax request. fires synchronously by default. No j-word needed!
         function postAjax(soapStr) {
@@ -239,15 +236,15 @@
                 }
             }
 
-            if (userObj.getEventsAfterDate) {
+            if (spCalProObj.getEventsAfterDate) {
                 eventArr = eventArr.filter(function(event) {
-                    return event.EventDate >= userObj.getEventsAfterDate;
+                    return (event.EventDate) ? event.EventDate >= spCalProObj.getEventsAfterDate : event;
                 });
             }
 
-            if (userObj.getEventsBeforeDate) {
+            if (spCalProObj.getEventsBeforeDate) {
                 eventArr = eventArr.filter(function(event) {
-                    return event.EventDate <= userObj.getEventsBeforeDate;
+                    return (event.EventDate) ? event.EventDate <= spCalProObj.getEventsBeforeDate : event;
                 });
             }
 
@@ -294,15 +291,28 @@
         }
     }
 
+    function checkDateType(val) {
+        var output;
+
+        if (val) {
+            if (typeof val.getMonth === "function") output = val;
+            else output = new Date(val);
+        } else {
+            output = null;
+        }
+
+        return output;
+    }
+
 
     // the main object we use.
     function SPCalendarPro(obj, listType) {
-        this.listName = obj.listName;
-        this.getEventsAfterDate = (obj.getEventsAfterDate) ? obj.getEventsAfterDate : null;
-        this.getEventsBeforeDate = (obj.getEventsBeforeDate) ? obj.getEventsBeforeDate : null;
+        this.listName = (obj.listName) ? obj.listName : null;
+        this.getEventsAfterDate = checkDateType(obj.getEventsAfterDate);
+        this.getEventsBeforeDate = checkDateType(obj.getEventsBeforeDate);
         this.fields = obj.fields ? obj.fields : null;
         this.userDateTimes = (obj.userDateTimes) ? obj.userDateTimes : null;
-        this.whereCAMLQuery = (obj.whereCAMLQuery) ? obj.whereCAMLQuery : null;
+        this.CamlQuery = (obj.CamlQuery) ? obj.CamlQuery : null;
         var listSourceSite = getSPEnvInfo(obj.sourceSite);
 
         this.ready = function (execCallback) {
@@ -313,7 +323,11 @@
             return (obj.callback) ? obj.callback(this) : null;
         }
 
-        this.data = getListData(this, obj, listType, listSourceSite);
+        if (typeof obj.listName === "string") {
+            this.data = getListData(this, obj, listType, listSourceSite);
+        } else {
+            console.error('You must specify a list name.');
+        } 
         return this;
     }
 
@@ -332,8 +346,8 @@
             return formatDateTimesToObj(time.userBeginDT, time.userEndDT);
         },
 
-        provideDateTimes: function (dateTime1, dateTime2) {
-            return formatDateTimesToObj(dateTime1, dateTime2);
+        userDates: function (dateTime1, dateTime2) {
+            return formatDateTimesToObj(checkDateType(dateTime1), checkDateType(dateTime2));
         },
 
         disableDragAndDrop: function () {
