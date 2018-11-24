@@ -31,8 +31,9 @@ The painful process of obtaining recurring events, matching user provided dateti
 3) Return only the events that occur between today and one month from now.
 4) Gather the list data from a different subsite than the originating one in the same site collection.
 5) Deliver a error message in the console if the request fails.
-6) Compare the returned calendar events to see if any pose a time conflict with the datetimes provided in the user form, and then determine which items have a LinkTitle of `Homer Simpson`.
+6) Compare the returned calendar events to see if any pose a time conflict with the datetimes provided in the user form, and then determine which items have a `LinkTitle` of `Homer Simpson`.
 
+## 
     spcalpro.getCalendarEvents({
         listName: 'StaffSchedule',
         userDateTimes: spcalpro.getDateTimesFromForm(0,1),
