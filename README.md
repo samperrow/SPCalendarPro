@@ -15,7 +15,7 @@ The painful process of obtaining recurring events, matching user provided dateti
 ## Features
 1) Easily collects calendar event items (recurring events, single events, or a combination of the two).
 2) Provides a simple way to collect requested datetime values the user. You can either pass the datetime variables into a method, or use a method to convert datetimes from a SharePoint form into proper datetime variables.
-3) Provides several methods to easily facilitate various datetime comparisons. Match specified datetimes: matchDateTimes(), determine time conflicts: isTimeConflict(), same dates: isSameDate(), etc).\
+3) Provides several methods to easily facilitate various datetime comparisons. Match specified datetimes: matchDateTimes(), determine time conflicts: isTimeConflict(), same dates: isSameDate(), etc).
 4) A basic 'where' operator to provide simple filtering based on field values.
 5) Return only datetimes that occur after today: getEventsAfterToday().
 6) Returns list items along with calendar events.
@@ -25,8 +25,6 @@ The painful process of obtaining recurring events, matching user provided dateti
 10) Lightweight! 8 KB minified, 16 KB unminified, with comments.
 
 ## Example
-This example below will:
-
 1) Asynchronously collect all events (single and recurring) from the "StaffSchedule" calendar list. 
 2) Convert user provided datetime information from a SharePoint form into proper date objects for use. The "0,1" parameters specify which datetime field elements on a form are to be converted.
 3) Return only the events that occur between today and one month from now.
