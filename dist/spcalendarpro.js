@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 1.2.2
+* Version 1.2.3
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @documentation https://spcalendarpro.sharepointhacks.com
@@ -250,7 +250,7 @@
 
             return eventArr;
         }
-        return spCalProObj;
+        return spCalProObj.data;
     }
 
     String.prototype.formatInputToHours = function () {
