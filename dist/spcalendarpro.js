@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 1.2.3
+* Version 1.2.4
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @documentation https://spcalendarpro.sharepointhacks.com
@@ -28,8 +28,8 @@
 
     // checks if supplied datetimes are the same date as ones in calendar list.
     SPCalendarPro.prototype.isSameDate = function () {
-        var reqbeginDate = this.userDateTimes.begin.beginDate.toDateString();
-        var reqEndDate = this.userDateTimes.end.endDate.toDateString();
+        var reqbeginDate = this.userDateTimes.begin.beginDate;
+        var reqEndDate = this.userDateTimes.end.endDate;
 
         this.data = this.data.filter(function (event) {
             return event.EventDate.toDateString() === reqbeginDate && event.EndDate.toDateString() === reqEndDate;
@@ -52,7 +52,6 @@
 
     // checks for time conflicts between provided begin/end datetime and events
     SPCalendarPro.prototype.isTimeConflict = function () {
-
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
@@ -125,15 +124,14 @@
             var soapFooter = "</soap:Body></soap:Envelope>";
             var beginRecurringCaml = "<DateRangesOverlap><FieldRef Name='EventDate'/><FieldRef Name='EndDate'/><FieldRef Name='RecurrenceID'/><Value Type='DateTime'><Year/></Value></DateRangesOverlap>";
             var endRecurringCaml = "</Where><OrderBy><FieldRef Name='EventDate'/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope='RecursiveAll'/></QueryOptions></queryOptions>";
-            var singleQuery = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>";
             var recurringQuery = "<query><Query><Where><And>" + beginRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
             var query = "";
             var fieldNames = (userObj.fields) ? getFieldNames() : '';
-
+ 
             if (userObj.CamlQuery) {
                 query = userObj.CamlQuery;
             } else if (listType === 'calendar') {
-                if (userObj.type === 'single') query = singleQuery;
+                if (userObj.type === "single") query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>";
                 else if (userObj.type === 'recurring') query = recurringQuery;
                 else query = "<query><Query><Where>" + beginRecurringCaml + endRecurringCaml;
             } else if (listType === 'list' && fieldNames === "") {
@@ -155,7 +153,7 @@
                 }
             }
 
-            return "<viewFields><ViewFields>" + viewFields + "</ViewFields></viewFields>";
+            return (viewFields.length > 0) ? "<viewFields><ViewFields>" + viewFields + "</ViewFields></viewFields>" : '';
         }
 
 
@@ -228,8 +226,8 @@
                         var thisAttrName = rowAttrs[attrNum].name.split("ows_")[1];
 
                         row[thisAttrName] = (thisAttrName === 'EventDate' || thisAttrName === 'EndDate')
-                            ? new Date(rowAttrs[attrNum].value.replace('-', '/'))
-                            : rowAttrs[attrNum].value;
+                            ? new Date(rowAttrs[attrNum].value.replace(/-/g, '/'))
+                            : rowAttrs[attrNum].value;                                      
                     }
 
                     eventArr.push(row);
@@ -291,17 +289,9 @@
         }
     }
 
+    // Turn the user provided value into a date object if needed
     function checkDateType(val) {
-        var output;
-
-        if (val) {
-            if (typeof val.getMonth === "function") output = val;
-            else output = new Date(val);
-        } else {
-            output = null;
-        }
-
-        return output;
+        return (val) ? (typeof val.getMonth === "function") ? val : new Date(val) : null;
     }
 
 
