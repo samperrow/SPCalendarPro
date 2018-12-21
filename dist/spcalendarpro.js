@@ -1,6 +1,6 @@
 /*
 * @name SPCalendarPro
-* Version 1.2.4
+* Version 1.2.41
 * No dependencies!
 * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
 * @documentation https://spcalendarpro.sharepointhacks.com
@@ -131,7 +131,13 @@
             if (userObj.CamlQuery) {
                 query = userObj.CamlQuery;
             } else if (listType === 'calendar') {
-                if (userObj.type === "single") query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>";
+
+                if (userObj.type === "single") {
+                    query = (listSourceSite.year === '2010') 
+                        ? "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>"
+                        : "<query><Query><Where><IsNull><FieldRef Name='fRecurrence'/></IsNull></Where></Query></query>";
+                }
+
                 else if (userObj.type === 'recurring') query = recurringQuery;
                 else query = "<query><Query><Where>" + beginRecurringCaml + endRecurringCaml;
             } else if (listType === 'list' && fieldNames === "") {
