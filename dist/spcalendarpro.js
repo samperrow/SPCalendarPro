@@ -1,37 +1,40 @@
 /*
-* @name SPCalendarPro
-* Version 1.2.41
-* No dependencies!
-* @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
-* @documentation https://spcalendarpro.sharepointhacks.com
-* @author Sam Perrow sam.perrow399@gmail.com
-*
-* Copyright 2018  Sam Perrow  (email : sam.perrow399@gmail.com)
-* Licensed under the MIT license:
-* http://www.opensource.org/licenses/mit-license.php
-*/
+ * @name SPCalendarPro
+ * Version 1.2.5
+ * No dependencies!
+ * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
+ * @documentation https://spcalendarpro.sharepointhacks.com
+ * @author Sam Perrow sam.perrow399@gmail.com
+ *
+ * Copyright 2018  Sam Perrow  (email : sam.perrow399@gmail.com)
+ * Licensed under the MIT license:
+ * http://www.opensource.org/licenses/mit-license.php
+ */
 
-(function (global, factory) {
+(function(global, factory) {
     global.spcalpro = factory();
-}(this, function () {
+}(this, function() {
 
-    function getSPEnvInfo(site) {
+    "use strict";
+    var userEnvData;
+
+    function getUserEnvInfo(site) {
         var spVersion = _spPageContextInfo.webUIVersion;
 
         return {
             year: (spVersion === 15) ? '2013' : '2010',
-            soapURL: (typeof site === 'string' && site.length > 0)
-                ? site + '/_vti_bin/Lists.asmx'
-                : (spVersion === 15) ? _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx' : document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx'
+            soapURL: (typeof site === 'string' && site.length > 0) ?
+                site + '/_vti_bin/Lists.asmx' :
+                (spVersion === 15) ? _spPageContextInfo.webAbsoluteUrl + '/_vti_bin/Lists.asmx' : document.location.protocol + '//' + document.location.host + _spPageContextInfo.webServerRelativeUrl + '/_vti_bin/Lists.asmx'
         }
     }
 
     // checks if supplied datetimes are the same date as ones in calendar list.
-    SPCalendarPro.prototype.isSameDate = function () {
+    SPCalendarPro.prototype.isSameDate = function() {
         var reqbeginDate = this.userDateTimes.begin.beginDate;
         var reqEndDate = this.userDateTimes.end.endDate;
 
-        this.data = this.data.filter(function (event) {
+        this.data = this.data.filter(function(event) {
             return event.EventDate.toDateString() === reqbeginDate && event.EndDate.toDateString() === reqEndDate;
         });
 
@@ -39,11 +42,11 @@
     }
 
     // provide begin/end datetimes, and this method will check for events that fall in that range..
-    SPCalendarPro.prototype.matchDateTimes = function () {
+    SPCalendarPro.prototype.matchDateTimes = function() {
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
-        this.data = this.data.filter(function (event) {
+        this.data = this.data.filter(function(event) {
             return (event.EventDate <= reqBeginDT) && (event.EndDate >= reqEndDT);
         });
 
@@ -51,38 +54,38 @@
     }
 
     // checks for time conflicts between provided begin/end datetime and events
-    SPCalendarPro.prototype.isTimeConflict = function () {
+    SPCalendarPro.prototype.isTimeConflict = function() {
         var reqBeginDT = this.userDateTimes.begin.beginDateTime;
         var reqEndDT = this.userDateTimes.end.endDateTime;
 
-        this.data = this.data.filter(function (event) {
+        this.data = this.data.filter(function(event) {
             var arrBeginDT = event.EventDate;
             var arrEndDT = event.EndDate;
 
             return (
-                (reqBeginDT <= arrBeginDT && reqEndDT >= arrEndDT) || (arrBeginDT < reqBeginDT && arrEndDT > reqBeginDT)
-                || (arrBeginDT < reqEndDT && arrEndDT > reqEndDT) || (reqBeginDT < arrBeginDT && reqEndDT > arrEndDT));
+                (reqBeginDT <= arrBeginDT && reqEndDT >= arrEndDT) || (arrBeginDT < reqBeginDT && arrEndDT > reqBeginDT) ||
+                (arrBeginDT < reqEndDT && arrEndDT > reqEndDT) || (reqBeginDT < arrBeginDT && reqEndDT > arrEndDT));
         });
 
         return this;
     }
 
     // couldn't do without a where clause now could we?
-    SPCalendarPro.prototype.where = function (str) {
+    SPCalendarPro.prototype.where = function(str) {
         var fieldName = str.split(' ')[0];
         var operation = str.split(' ')[1];
         var value = str.split(operation + ' ')[1];
 
         var operators = {
-            '=': function (a, b) { return a == b },
-            '>': function (a, b) { return a > new Number(b) },
-            '<': function (a, b) { return a < new Number(b) },
-            '>=': function (a, b) { return a >= new Number(b) },
-            '<=': function (a, b) { return a <= new Number(b) },
-            '!=': function (a, b) { return a != b }
+            '=': function(a, b) { return a == b },
+            '>': function(a, b) { return a > new Number(b) },
+            '<': function(a, b) { return a < new Number(b) },
+            '>=': function(a, b) { return a >= new Number(b) },
+            '<=': function(a, b) { return a <= new Number(b) },
+            '!=': function(a, b) { return a != b }
         }
 
-        this.data = this.data.filter(function (event) {
+        this.data = this.data.filter(function(event) {
             return operators[operation](event[fieldName], value);
         });
 
@@ -108,15 +111,17 @@
 
     // Converts large string from external list to valid XML
     function StringToXML(oString) {
-        return (window.ActiveXObject)
-            ? new ActiveXObject("Microsoft.XMLDOM").loadXML(oString)
-            : new DOMParser().parseFromString(oString, 'application/xml');
+        return (window.ActiveXObject) ?
+            new ActiveXObject("Microsoft.XMLDOM").loadXML(oString) :
+            new DOMParser().parseFromString(oString, 'application/xml');
     }
 
 
     // Query the calendar or list and return the items
-    var getListData = function (spCalProObj, userObj, listType, listSourceSite) {
+    var getListData = function(spCalProObj, userObj, listType, userEnvData) {
         var doAsync = (typeof userObj.async === 'undefined') ? true : userObj.async;
+
+
 
         // Create the CAML query. returns single and recurring events by default, unless otherwise specified.
         function createCAMLQuery() {
@@ -127,17 +132,11 @@
             var recurringQuery = "<query><Query><Where><And>" + beginRecurringCaml + "<Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>1</Value></Eq></And>" + endRecurringCaml;
             var query = "";
             var fieldNames = (userObj.fields) ? getFieldNames() : '';
- 
+
             if (userObj.CamlQuery) {
                 query = userObj.CamlQuery;
             } else if (listType === 'calendar') {
-
-                if (userObj.type === "single") {
-                    query = (listSourceSite.year === '2010') 
-                        ? "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>"
-                        : "<query><Query><Where><IsNull><FieldRef Name='fRecurrence'/></IsNull></Where></Query></query>";
-                }
-
+                if (userObj.type === "single") query = "<query><Query><Where><Eq><FieldRef Name='fRecurrence'/><Value Type='Number'>0</Value></Eq></Where></Query></query>";
                 else if (userObj.type === 'recurring') query = recurringQuery;
                 else query = "<query><Query><Where>" + beginRecurringCaml + endRecurringCaml;
             } else if (listType === 'list' && fieldNames === "") {
@@ -152,7 +151,7 @@
 
         function getFieldNames() {
             var viewFields = (listType === 'calendar') ? '<FieldRef Name="fRecurrence"/>' : '';
-            
+
             for (var i = 0; i < userObj.fields.length; i++) {
                 if (typeof userObj.fields[i] === "string") {
                     viewFields += "<FieldRef Name='" + userObj.fields[i] + "'/>";
@@ -163,47 +162,39 @@
         }
 
 
-        // make ajax request. fires synchronously by default. No j-word needed!
+        // make ajax request. fires synchronously by default.
         function postAjax(soapStr) {
             var xhr = new XMLHttpRequest();
-            xhr.open('POST', listSourceSite.soapURL, doAsync);
+            xhr.open('POST', userEnvData.soapURL, doAsync);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
             xhr.send(soapStr);
 
             if (doAsync === true) {
-                xhr.onload = function () { 
+                xhr[(xhr.onload) ? "onload" : "onreadystatechange"] = function() {
                     return determineXhrStatus(xhr);
                 }
             } else {
-                return determineXhrStatus(xhr);
+                determineXhrStatus(xhr);
             }
         }
 
         function determineXhrStatus(xhr) {
-            
             if (xhr.readyState == 4 && xhr.status == 200) {
                 XhrToObj(xhr);
+                complete();
             } else if (xhr.status == 500) {
                 getErrorData(xhr);
+                complete();
             }
-
-            if (userObj.callback) {
-                return userObj.callback(spCalProObj.data, spCalProObj);
-            } else if (spCalProObj.userCallback) {
-                return spCalProObj.userCallback(spCalProObj.data, spCalProObj);
-            } else {
-                return spCalProObj;
-            }
-
         }
 
         function XhrToObj(xhr) {
             if (xhr.responseXML) {
-                return spCalProObj.data = XmlToJson(xhr.responseXML.querySelectorAll('*'));
-            } else if (!xhr.responseXML && xhr.responseText) {                                      // in case the list is an external list. 
-                var xml = StringToXML(xhr.responseText.replace(/&#22;|&#0;/g, ''));                 // removes HTML chars that makes the XML parser fail.
-                return spCalProObj.data = XmlToJson(xml.querySelectorAll('*'));
+                return spCalProObj.data = XmlToJson(xhr.responseXML.getElementsByTagName('*'));
+            } else if (!xhr.responseXML && xhr.responseText) { // in case the list is an external list. 
+                var xml = StringToXML(xhr.responseText.replace(/&#22;|&#0;/g, '')); // removes HTML chars that makes the XML parsing fail.
+                return spCalProObj.data = XmlToJson(xml.getElementsByTagName('*'));
             }
         }
 
@@ -213,10 +204,9 @@
                 errorString: (/<errorstring xmlns="http:\/\/schemas.microsoft.com\/sharepoint\/soap\/">/.test(xhr.responseText)) ? xhr.responseText.split('<errorstring xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorstring>')[0] : '',
                 faultString: (/<faultstring>/.test(xhr.responseText)) ? xhr.responseText.split('<faultstring>')[1].split('</faultstring>')[0] : ''
             }
-            console.error( spCalProObj.error);
+            console.error(spCalProObj.error);
             return spCalProObj.error;
         }
-
 
         // accepts XML, returns an array of objects, each of which are calendar events.
         function XmlToJson(xml) {
@@ -231,9 +221,9 @@
                     for (var attrNum = 0; attrNum < rowAttrs.length; attrNum++) {
                         var thisAttrName = rowAttrs[attrNum].name.split("ows_")[1];
 
-                        row[thisAttrName] = (thisAttrName === 'EventDate' || thisAttrName === 'EndDate')
-                            ? new Date(rowAttrs[attrNum].value.replace(/-/g, '/'))
-                            : rowAttrs[attrNum].value;                                      
+                        row[thisAttrName] = (thisAttrName === 'EventDate' || thisAttrName === 'EndDate') 
+                            ? new Date(rowAttrs[attrNum].value.replace(/-/g, '/')) 
+                            : rowAttrs[attrNum].value;
                     }
 
                     eventArr.push(row);
@@ -254,10 +244,21 @@
 
             return eventArr;
         }
+
+        function complete() {
+            if (userObj.callback) {
+                return userObj.callback(spCalProObj.data, spCalProObj);
+            } else if (spCalProObj.userCallback) {
+                return spCalProObj.userCallback(spCalProObj.data, spCalProObj);
+            } else {
+                return spCalProObj;
+            }
+        }
+
         return spCalProObj.data;
     }
 
-    String.prototype.formatInputToHours = function () {
+    String.prototype.formatInputToHours = function() {
         var amPmTime = this.split(' ');
         var hours = Number(amPmTime[0]);
         return (amPmTime[1] === 'PM' && hours < 12) ? hours += 12 : hours;
@@ -265,7 +266,7 @@
 
     // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use.
     // by default this grabs the first and second date/time rows from a form.
-    var convertFormDateTimes = function (row1, row2) {
+    var convertFormDateTimes = function(row1, row2) {
         row1 = (!row1) ? 0 : row1;
         row2 = (!row2) ? 1 : row2;
 
@@ -280,7 +281,7 @@
 
             return {
                 date: dtParentElem.getElementsByTagName('td')[0].getElementsByTagName('input')[0].value,
-                time: function () {
+                time: function() {
                     return (hours && min) ? hours.formatInputToHours() + ':' + min : '';
                 }
             }
@@ -294,6 +295,34 @@
             userEndDT: new Date(endDateTimes.date + ' ' + endDateTimes.time())
         }
     }
+
+    // taken from https://stackoverflow.com/questions/7153470/why-wont-filter-work-in-internet-explorer-8
+    function createArrayFilter() {
+        return Array.prototype.filter = function(fn) {
+
+            if (this === void 0 || this === null)
+                throw new TypeError();
+
+            var t = Object(this);
+            var len = t.length >>> 0;
+            if (typeof fn !== "function")
+                throw new TypeError();
+
+            var res = [];
+            var thisp = arguments[1];
+            for (var i = 0; i < len; i++) {
+                if (i in t) {
+                    var val = t[i]; // in case fn mutates this
+                    if (fn.call(thisp, val, i, t)) {
+                        res.push(val);
+                    }
+                }
+            }
+
+            return res;
+        }
+    }
+
 
     // Turn the user provided value into a date object if needed
     function checkDateType(val) {
@@ -309,48 +338,53 @@
         this.fields = obj.fields ? obj.fields : null;
         this.userDateTimes = (obj.userDateTimes) ? obj.userDateTimes : null;
         this.CamlQuery = (obj.CamlQuery) ? obj.CamlQuery : null;
-        var listSourceSite = getSPEnvInfo(obj.sourceSite);
+        userEnvData = getUserEnvInfo(obj.sourceSite);
 
-        this.ready = function (execCallback) {
+        if (!Array.prototype.filter) {
+            createArrayFilter();
+        }
+
+        this.ready = function(execCallback) {
             this.userCallback = execCallback;
         }
 
-        this.callback = function () {
+        this.callback = function() {
             return (obj.callback) ? obj.callback(this) : null;
         }
 
         if (typeof obj.listName === "string") {
-            this.data = getListData(this, obj, listType, listSourceSite);
+            this.data = getListData(this, obj, listType, userEnvData);
         } else {
             console.error('You must specify a list name.');
-        } 
+        }
         return this;
     }
 
 
     var data = {
-        getCalendarEvents: function (obj) {
+        getCalendarEvents: function(obj) {
             return new SPCalendarPro(obj, 'calendar');
         },
 
-        getListItems: function (obj) {
+        getListItems: function(obj) {
             return new SPCalendarPro(obj, 'list');
         },
 
-        getDateTimesFromForm: function (row1, row2) {
+        getDateTimesFromForm: function(row1, row2) {
             var time = convertFormDateTimes(row1, row2);
             return formatDateTimesToObj(time.userBeginDT, time.userEndDT);
         },
 
-        userDates: function (dateTime1, dateTime2) {
+        userDates: function(dateTime1, dateTime2) {
             return formatDateTimesToObj(checkDateType(dateTime1), checkDateType(dateTime2));
         },
 
-        disableDragAndDrop: function () {
+        disableDragAndDrop: function() {
             ExecuteOrDelayUntilScriptLoaded(disableDragDrop, 'SP.UI.ApplicationPages.Calendar.js');
+
             function disableDragDrop() {
                 var calendarCreate = SP.UI.ApplicationPages.CalendarContainerFactory.create;
-                SP.UI.ApplicationPages.CalendarContainerFactory.create = function (elem, cctx, viewType, date, startupData) {
+                SP.UI.ApplicationPages.CalendarContainerFactory.create = function(elem, cctx, viewType, date, startupData) {
                     if (cctx.dataSources && cctx.dataSources instanceof Array && cctx.dataSources.length > 0) {
                         for (var i = 0; i < cctx.dataSources.length; i++) {
                             cctx.dataSources[i].disableDrag = true;
