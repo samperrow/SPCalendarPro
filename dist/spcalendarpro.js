@@ -3,7 +3,7 @@
  * Version 1.2.5
  * No dependencies!
  * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
- * @documentation https://spcalendarpro.sharepointhacks.com
+ * @documentation https://sharepointhacks.com/sp-calendar-pro
  * @author Sam Perrow sam.perrow399@gmail.com
  *
  * Copyright 2018  Sam Perrow  (email : sam.perrow399@gmail.com)
