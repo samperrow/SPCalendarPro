@@ -86,18 +86,18 @@
 
 
     // Create the CAML query. returns single and recurring events by default, unless otherwise specified.
-    var CamlBuilder = function(spCalProObj, userObj, listType) {
+    var CamlBuilder = function(userObj, listType) {
         var soapHeader = '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetListItems xmlns="http://schemas.microsoft.com/sharepoint/soap/"><listName>' + userObj.listName + '</listName>';
         var soapFooter = '</GetListItems></soap:Body></soap:Envelope>';
         var beginRecurringCaml = '<Where><DateRangesOverlap><FieldRef Name="EventDate"/><FieldRef Name="EndDate"/><FieldRef Name="RecurrenceID"/><Value Type="DateTime"><Year/></Value></DateRangesOverlap></Where>';
         var endRecurringCaml = '<OrderBy><FieldRef Name="EventDate"/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope="RecursiveAll"/></QueryOptions></queryOptions>';
-        var recurringQuery = '<Where><And>' + beginRecurringCaml + '<Eq><FieldRef Name="fRecurrence"/><Value Type="Number">1</Value></Eq></And>' + endRecurringCaml;
+        // var recurringQuery = '<Where><And>' + beginRecurringCaml + '<Eq><FieldRef Name="fRecurrence"/><Value Type="Number">1</Value></Eq></And>' + endRecurringCaml;
 
         function createQuery() {
             var query = "<query><Query>";
             var endQuery = "</Query></query>";
 
-            if (userObj.customCamlQuery) query = userObj.customCamlQuery;
+            if (userObj.camlQuery) query = userObj.camlQuery;
 
             if (userObj.fields) endQuery += getFieldNames();
 
@@ -286,20 +286,22 @@
     }
 
     // Turn the user provided value into a date object if needed
-    function checkDateType(val) {
-        return (val) ? (typeof val.getMonth === "function") ? val : new Date(val) : null;
-    }
+    // function checkDateType(val) {
+    //     return (val) ? (typeof val.getMonth === "function") ? val : new Date(val) : null;
+    // }
 
     // the main object we use.
     function SPCalendarPro(obj, listType) {
         this.listName = (obj.listName) ? obj.listName : null;
-        this.getEventsAfterDate = checkDateType(obj.getEventsAfterDate);
-        this.getEventsBeforeDate = checkDateType(obj.getEventsBeforeDate);
+        // this.getEventsAfterDate = checkDateType(obj.getEventsAfterDate);
+        // this.getEventsBeforeDate = checkDateType(obj.getEventsBeforeDate);
         this.fields = obj.fields ? obj.fields : null;
         this.userDateTimes = (obj.userDateTimes) ? obj.userDateTimes : null;
-        this.customCamlQuery = (obj.customCamlQuery) ? obj.customCamlQuery : null;
+        this.camlQuery = (obj.camlQuery) ? obj.camlQuery : null;
         this.where = (obj.where) ? obj.where : null;
         this.userEnvData = getUserEnvInfo(obj.sourceSite);
+
+        // add/check sourceSite prop
 
         if (!Array.prototype.filter) {
             createArrayFilter();
@@ -314,7 +316,7 @@
         }
 
         if (typeof obj.listName === "string") {
-            this.CamlQuery = CamlBuilder(this, obj, listType);
+            this.CamlQuery = CamlBuilder(obj, listType);
             this.data = getListData(this, obj);
         } else {
             console.error('You must specify a list name.');
