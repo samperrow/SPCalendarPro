@@ -26,29 +26,21 @@
     }
 
     // checks if supplied datetimes are the same date as ones in calendar list.
-    SPCalendarPro.prototype.isSameDate = function() {
-        var reqbeginDate = this.userDateTimes.begin.beginDate;
-        var reqEndDate = this.userDateTimes.end.endDate;
-
+    SPCalendarPro.prototype.isSameDate = function(reqbeginDate, reqEndDate) {
         return this.data.filter(function(event) {
-            return event.EventDate.toDateString() === reqbeginDate && event.EndDate.toDateString() === reqEndDate;
+            return event.EventDate.split(" ")[0] === reqbeginDate && event.EndDate.split(" ")[0] === reqEndDate;
         });
     }
 
     // provide begin/end datetimes, and this method will check for events that fall in that range..
-    SPCalendarPro.prototype.matchDateTimes = function() {
-        var reqBeginDT = this.userDateTimes.begin.beginDateTime;
-        var reqEndDT = this.userDateTimes.end.endDateTime;
-
+    SPCalendarPro.prototype.matchDateTimes = function(reqBeginDT, reqEndDT) {
         return this.data.filter(function(event) {
             return (event.EventDate <= reqBeginDT) && (event.EndDate >= reqEndDT);
         });
     }
 
     // checks for time conflicts between provided begin/end datetime and events
-    SPCalendarPro.prototype.isTimeConflict = function() {
-        var reqBeginDT = this.userDateTimes.begin.beginDateTime;
-        var reqEndDT = this.userDateTimes.end.endDateTime;
+    SPCalendarPro.prototype.isTimeConflict = function(reqBeginDT, reqEndDT) {
 
         return this.data.filter(function(event) {
             var arrBeginDT = event.EventDate;
@@ -82,16 +74,12 @@
             : new DOMParser().parseFromString(oString, 'application/xml');
     }
 
-
-
-
     // Create the CAML query. returns single and recurring events by default, unless otherwise specified.
     var CamlBuilder = function(userObj, listType) {
         var soapHeader = '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetListItems xmlns="http://schemas.microsoft.com/sharepoint/soap/"><listName>' + userObj.listName + '</listName>';
         var soapFooter = '</GetListItems></soap:Body></soap:Envelope>';
         var beginRecurringCaml = '<Where><DateRangesOverlap><FieldRef Name="EventDate"/><FieldRef Name="EndDate"/><FieldRef Name="RecurrenceID"/><Value Type="DateTime"><Year/></Value></DateRangesOverlap></Where>';
         var endRecurringCaml = '<OrderBy><FieldRef Name="EventDate"/></OrderBy></Query></query><queryOptions><QueryOptions><RecurrencePatternXMLVersion>v3</RecurrencePatternXMLVersion><ExpandRecurrence>TRUE</ExpandRecurrence><RecurrenceOrderBy>TRUE</RecurrenceOrderBy><ViewAttributes Scope="RecursiveAll"/></QueryOptions></queryOptions>';
-        // var recurringQuery = '<Where><And>' + beginRecurringCaml + '<Eq><FieldRef Name="fRecurrence"/><Value Type="Number">1</Value></Eq></And>' + endRecurringCaml;
 
         function createQuery() {
             var query = "<query><Query>";
@@ -146,22 +134,21 @@
 
     // Query the calendar or list and return the items
     var getListData = function(spCalProObj, userObj) {
-        var doAsync = (typeof userObj.async === 'undefined') ? true : userObj.async;
-
         postAjax(spCalProObj.CamlQuery);
 
         // make ajax request. fires synchronously by default.
         function postAjax(soapStr) {
             var xhr = new XMLHttpRequest();
-            xhr.open('POST', spCalProObj.userEnvData, doAsync);
+            xhr.open('POST', spCalProObj.userEnvData, spCalProObj.async);
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.setRequestHeader('Content-Type', 'text/xml;charset="utf-8"');
             xhr.send(soapStr);
-            if (doAsync === true) {
+            if (spCalProObj.async === true) {
                 xhr[(xhr.onload) ? "onload" : "onreadystatechange"] = function() {
                     return determineXhrStatus(xhr);
                 }
-            } else {
+            } 
+            else {
                 determineXhrStatus(xhr);
             }
         }
@@ -186,13 +173,11 @@
         }
 
         function getErrorData(xhr) {
-            spCalProObj.error = {
+            return spCalProObj.error = {
                 errorCode: (/<errorcode xmlns="http:\/\/schemas.microsoft.com\/sharepoint\/soap\/">/.test(xhr.responseText)) ? xhr.responseText.split('<errorcode xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorcode>')[0] : '',
                 errorString: (/<errorstring xmlns="http:\/\/schemas.microsoft.com\/sharepoint\/soap\/">/.test(xhr.responseText)) ? xhr.responseText.split('<errorstring xmlns="http://schemas.microsoft.com/sharepoint/soap/">')[1].split('</errorstring>')[0] : '',
                 faultString: (/<faultstring>/.test(xhr.responseText)) ? xhr.responseText.split('<faultstring>')[1].split('</faultstring>')[0] : ''
             }
-            console.error(spCalProObj.error);
-            return spCalProObj.error;
         }
 
         // accepts XML, returns an array of objects, each of which are calendar events.
@@ -225,8 +210,7 @@
         return (amPmTime[1] === 'PM' && hours < 12) ? hours += 12 : hours;
     }
 
-    // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use.
-    // by default this grabs the first and second date/time rows from a form.
+    // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use. by default this grabs the first and second date/time rows from a form.
     var convertFormDateTimes = function(row1, row2) {
         row1 = (!row1) ? 0 : row1;
         row2 = (!row2) ? 1 : row2;
@@ -285,30 +269,21 @@
         }
     }
 
-    // Turn the user provided value into a date object if needed
-    // function checkDateType(val) {
-    //     return (val) ? (typeof val.getMonth === "function") ? val : new Date(val) : null;
-    // }
-
     // the main object we use.
     function SPCalendarPro(obj, listType) {
         this.listName = (obj.listName) ? obj.listName : null;
-        // this.getEventsAfterDate = checkDateType(obj.getEventsAfterDate);
-        // this.getEventsBeforeDate = checkDateType(obj.getEventsBeforeDate);
         this.fields = obj.fields ? obj.fields : null;
-        this.userDateTimes = (obj.userDateTimes) ? obj.userDateTimes : null;
         this.camlQuery = (obj.camlQuery) ? obj.camlQuery : null;
         this.where = (obj.where) ? obj.where : null;
         this.userEnvData = getUserEnvInfo(obj.sourceSite);
-
-        // add/check sourceSite prop
+        this.async = (typeof obj.async === "undefined") ? true : obj.async;
 
         if (!Array.prototype.filter) {
             createArrayFilter();
         }
 
         this.ready = function(execCallback) {
-            this.userCallback = execCallback;
+            return this.userCallback = execCallback;
         }
 
         this.callback = function() {
