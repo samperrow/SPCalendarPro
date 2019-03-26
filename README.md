@@ -21,7 +21,7 @@ The painful process of obtaining recurring events, matching user provided dateti
 6) Option to disable calendar drag and drop: spcalpro.disableDragAndDrop()
 7) Requires zero dependencies! Everything is pure vanilla JS.
 8) Compatible for all SharePoint versions- 2010, 2013, 2016, 2019, and SP Online.
-9) Lightweight! 8 KB minified, 16 KB unminified, with comments.
+9) Lightweight! 6 KB minified, 15 KB unminified, with comments.
 
 ## Example
 
