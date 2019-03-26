@@ -24,7 +24,7 @@ The painful process of obtaining recurring events, matching user provided dateti
 9) Lightweight! 6 KB minified, 15 KB unminified, with comments.
 
 ## Example
-
+The code below will:
 1) Asynchronously collect all events (single and recurring) from the `StaffSchedule` calendar list. 
 2) Return only the events have a `Title` of `Homer Simpson`.
 3) Compare the returned calendar events to see if any pose a time conflict with the datetimes provided in the `.isTimeConflict()` parameters.
