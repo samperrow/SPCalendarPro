@@ -1,6 +1,6 @@
 /*
  * @name SPCalendarPro
- * Version 1.3.0
+ * Version 1.3.1
  * No dependencies!
  * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
  * @documentation https://sharepointhacks.com/sp-calendar-pro
@@ -41,7 +41,6 @@
 
     // checks for time conflicts between provided begin/end datetime and events
     SPCalendarPro.prototype.isTimeConflict = function(reqBeginDT, reqEndDT) {
-
         return this.data.filter(function(event) {
             var arrBeginDT = event.EventDate;
             var arrEndDT = event.EndDate;
@@ -69,7 +68,7 @@
 
     // Converts large string from external list to valid XML
     function StringToXML(oString) {
-        return (window.ActiveXObject) 
+        return (window.ActiveXObject)
             ? new ActiveXObject("Microsoft.XMLDOM").loadXML(oString) 
             : new DOMParser().parseFromString(oString, 'application/xml');
     }
@@ -205,9 +204,9 @@
     }
 
     String.prototype.formatInputToHours = function() {
-        var amPmTime = this.split(' ');
+        var amPmTime = this.split(" ");
         var hours = Number(amPmTime[0]);
-        return (amPmTime[1] === 'PM' && hours < 12) ? hours += 12 : hours;
+        return (amPmTime[1] === 'PM' && hours < 12) ? hours += 12 : (hours < 10) ? "0" + hours.toString() : hours;
     }
 
     // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use. by default this grabs the first and second date/time rows from a form.
@@ -273,6 +272,7 @@
     function SPCalendarPro(obj, listType) {
         this.listName = (obj.listName) ? obj.listName : null;
         this.fields = obj.fields ? obj.fields : null;
+        this.userDateTimes = (obj.userDateTimes) ? obj.userDateTimes : null;
         this.camlQuery = (obj.camlQuery) ? obj.camlQuery : null;
         this.where = (obj.where) ? obj.where : null;
         this.userEnvData = getUserEnvInfo(obj.sourceSite);
