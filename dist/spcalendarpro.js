@@ -1,6 +1,6 @@
 /*
  * @name SPCalendarPro
- * Version 1.3.1
+ * Version 1.3.2
  * No dependencies!
  * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
  * @documentation https://sharepointhacks.com/sp-calendar-pro
@@ -41,6 +41,7 @@
 
     // checks for time conflicts between provided begin/end datetime and events
     SPCalendarPro.prototype.isTimeConflict = function(reqBeginDT, reqEndDT) {
+
         return this.data.filter(function(event) {
             var arrBeginDT = event.EventDate;
             var arrEndDT = event.EndDate;
@@ -68,7 +69,7 @@
 
     // Converts large string from external list to valid XML
     function StringToXML(oString) {
-        return (window.ActiveXObject)
+        return (window.ActiveXObject) 
             ? new ActiveXObject("Microsoft.XMLDOM").loadXML(oString) 
             : new DOMParser().parseFromString(oString, 'application/xml');
     }
@@ -221,16 +222,16 @@
                 var hours = timeElem.getElementsByTagName('select')[0].value;
                 var min = timeElem.getElementsByTagName('select')[1].value;
             }
-            var splitDate = dtParentElem.getElementsByTagName('td')[0].getElementsByTagName('input')[0].value.split("/");
-            
-            if (splitDate[0].length === 1) {            // This adds a "0" in front of a single digit month, so that browsers interpret better.
-                splitDate[0] = "0" + splitDate[0];
-            }
+
+            // This adds a "0" in front of a single digit month, so that browsers interpret better.
+            var splitDate = dtParentElem.getElementsByTagName('td')[0].getElementsByTagName('input')[0].value.split("/").map(function(item) {
+                return (item.length === 1) ? "0" + item : item;
+            });
 
             var formattedDate = splitDate[2] + "-" + splitDate[0] + "-" + splitDate[1];
 
             return {
-                date: formattedDate.toString(),
+                date: formattedDate,
                 time: function() {
                     return (hours && min) ? hours.formatInputToHours() + ':' + min + ":00" : '';
                 }
@@ -332,5 +333,4 @@
     }
 
     return data;
-
 }));
