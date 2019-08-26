@@ -1,9 +1,9 @@
 /*
  * @name SPCalendarPro
- * Version 1.3.2
+ * Version 1.3.3
  * No dependencies!
  * @description An ultra lightweight JavaScript library to easily manage SharePoint calendar events.
- * @documentation https://sharepointhacks.com/sp-calendar-pro
+ * @documentation https://sphacks.io/sp-calendar-pro
  * @author Sam Perrow sam.perrow399@gmail.com
  *
  * Copyright 2018 Sam Perrow (email : sam.perrow399@gmail.com)
@@ -41,6 +41,8 @@
 
     // checks for time conflicts between provided begin/end datetime and events
     SPCalendarPro.prototype.isTimeConflict = function(reqBeginDT, reqEndDT) {
+        // reqBeginDT = new Date(reqBeginDT);
+        // reqEndDT = new Date(reqEndDT);
 
         return this.data.filter(function(event) {
             var arrBeginDT = event.EventDate;
@@ -147,8 +149,7 @@
                 xhr[(xhr.onload) ? "onload" : "onreadystatechange"] = function() {
                     return determineXhrStatus(xhr);
                 }
-            } 
-            else {
+            } else {
                 determineXhrStatus(xhr);
             }
         }
@@ -210,41 +211,83 @@
         return (amPmTime[1] === 'PM' && hours < 12) ? hours += 12 : (hours < 10) ? "0" + hours.toString() : hours;
     }
 
-    // this will grab date/time input values from a sharepoint form and convert them into proper date objects for later use. by default this grabs the first and second date/time rows from a form.
-    var convertFormDateTimes = function(row1, row2) {
-        row1 = (!row1) ? 0 : row1;
-        row2 = (!row2) ? 1 : row2;
+    String.prototype.formatHoursToStr = function() {
+        var strToArr = this.split(':');
+        var hours = Number(strToArr[0]);
+        var str = '';
 
-        function findDateTimes(row) {
-            var dtParentElem = document.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[row].parentNode.parentNode;
-            var timeElem = dtParentElem.getElementsByClassName('ms-dttimeinput')[0];
-            if (timeElem) {
-                var hours = timeElem.getElementsByTagName('select')[0].value;
-                var min = timeElem.getElementsByTagName('select')[1].value;
-            }
-
-            // This adds a "0" in front of a single digit month, so that browsers interpret better.
-            var splitDate = dtParentElem.getElementsByTagName('td')[0].getElementsByTagName('input')[0].value.split("/").map(function(item) {
-                return (item.length === 1) ? "0" + item : item;
-            });
-
-            var formattedDate = splitDate[2] + "-" + splitDate[0] + "-" + splitDate[1];
-
-            return {
-                date: formattedDate,
-                time: function() {
-                    return (hours && min) ? hours.formatInputToHours() + ':' + min + ":00" : '';
-                }
-            }
+        if (hours > 12) {
+            hours -= 12;
+            str = ' PM';
+        } else {
+            str = ' AM';
         }
-        var beginDateTimes = findDateTimes(row1);
-        var endDateTimes = findDateTimes(row2);
 
         return {
-            userBeginDT: beginDateTimes.date + ' ' + beginDateTimes.time(),
-            userEndDT: endDateTimes.date + ' ' + endDateTimes.time()
+            hours: hours.toString() + str,
+            min: strToArr[1]
         }
     }
+
+    // This converts a "07" into "7", which is what date fields like for months and dates.
+    String.prototype.removeLeadingZero = function() {
+        return (this.indexOf('0') === 0) ? this.charAt(1) : this.valueOf();
+    }
+
+    function sortDateToFormDate(date) {
+        var arr = date.split("/");
+        return arr[1].removeLeadingZero() + "/" + arr[2].removeLeadingZero() + "/" + arr[0];
+    }
+
+    function convertDateToFormFriendlyDateObj(datetime) {
+        datetime = datetime.replace(/-/g, "/");
+        var timeStr = new Date(datetime).toTimeString().split(" ")[0].formatHoursToStr();
+
+        return {
+            date: sortDateToFormDate(datetime.split(" ")[0]),
+            hours: timeStr.hours,
+            min: timeStr.min
+        }
+    }
+
+    function getElemsFromFormDTRow(rowNum) {
+        var DTParentRow = document.querySelectorAll('input[id$="DateTimeField_DateTimeFieldDate"]')[rowNum].parentNode.parentNode;
+        var TimeParentTD = DTParentRow.getElementsByClassName('ms-dttimeinput')[0];
+        var timeDropdowns = TimeParentTD.getElementsByTagName('select');
+
+        return {
+            date:  DTParentRow.getElementsByTagName('td')[0].getElementsByTagName('input')[0],
+            hours: (timeDropdowns) ? timeDropdowns[0] : null,
+            min:   (timeDropdowns) ? timeDropdowns[1] : null,
+        }
+    }
+
+
+    // this will grab date/time input values from a sharepoint form and convert them into an object which contains a DateTime Obj and a DateTime string. by default this grabs the first datetime row from a form.
+    var convertFormDateToDateObj = function(rowNum) {
+        rowNum = (rowNum) ? rowNum : 0;
+
+        var formDateRow = getElemsFromFormDTRow(rowNum);
+
+        // This adds a "0" in front of a single digit month, so that browsers interpret better.
+        var splitDate = formDateRow.date.value.split("/").map(function(item) {
+            return (item.length === 1) ? "0" + item : item;
+        });
+
+        var date = splitDate[2] + "/" + splitDate[0] + "/" + splitDate[1];
+        var time = formDateRow.hours.value.formatInputToHours() + ':' + formDateRow.min.value + ":00";
+        var result = date + " " + time;
+
+        var obj = {
+            dateStr: result,
+            dateObj: new Date(result)
+        }
+
+        return obj;
+
+    }
+
+
 
     // taken from https://stackoverflow.com/questions/7153470/why-wont-filter-work-in-internet-explorer-8
     function createArrayFilter() {
@@ -269,15 +312,21 @@
         }
     }
 
+
+
     // the main object we use.
     function SPCalendarPro(obj, listType) {
-        this.listName = (obj.listName) ? obj.listName : null;
-        this.fields = obj.fields ? obj.fields : null;
-        this.userDateTimes = (obj.userDateTimes) ? obj.userDateTimes : null;
-        this.camlQuery = (obj.camlQuery) ? obj.camlQuery : null;
-        this.where = (obj.where) ? obj.where : null;
+        var args = Array.prototype.slice.call(arguments);
+
+        for (var key in args[0]) {
+            this[key] = args[0][key];
+        }
+
         this.userEnvData = getUserEnvInfo(obj.sourceSite);
-        this.async = (typeof obj.async === "undefined") ? true : obj.async;
+
+        if (!this.async) {
+            this.async = true;
+        } 
 
         if (!Array.prototype.filter) {
             createArrayFilter();
@@ -302,19 +351,27 @@
     }
 
     var data = {
+        convertDateToFormFriendlyDateObj: function(dt) {
+            return convertDateToFormFriendlyDateObj(dt);
+        },
+
         getCalendarEvents: function(obj) {
             return new SPCalendarPro(obj, 'calendar');
         },
+        
+        getDateFromFormFieldRow: function(row1) {
+            return convertFormDateToDateObj(row1);
+        },
+
         getListItems: function(obj) {
             return new SPCalendarPro(obj, 'list');
         },
-        getDateTimesFromForm: function(row1, row2) {
-            var time = convertFormDateTimes(row1, row2);
-            return formatDateTimesToObj(time.userBeginDT, time.userEndDT);
+
+        getValueFromDropDown: function(internalFieldName) {
+            var selectElem = document.querySelectorAll('select[title^="' + internalFieldName + '"]')[0];
+            return (selectElem.disabled) ? selectElem.parentNode.parentNode.nextSibling.nextSibling.getElementsByTagName('input')[0].value : selectElem.value;
         },
-        userDates: function(dateTime1, dateTime2) {
-            return formatDateTimesToObj(dateTime1, dateTime2);
-        },
+
         disableDragAndDrop: function() {
             ExecuteOrDelayUntilScriptLoaded(disableDragDrop, 'SP.UI.ApplicationPages.Calendar.js');
 
@@ -329,6 +386,10 @@
                     calendarCreate(elem, cctx, viewType, date, startupData);
                 }
             }
+        },
+
+        getElemsFromFormDTRow: function(rowNum) {
+            return getElemsFromFormDTRow(rowNum);
         }
     }
 

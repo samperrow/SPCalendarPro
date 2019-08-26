@@ -40,4 +40,4 @@ The code below will:
         console.table( homerJSimpson );
     });
 
-Full documentation can be found here: [https://sharepointhacks.com/sp-calendar-pro](https://sharepointhacks.com/sp-calendar-pro)
+Full documentation can be found here: [https://sphacks.io/sp-calendar-pro](https://sphacks.io/sp-calendar-pro)
